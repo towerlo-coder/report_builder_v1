@@ -31,7 +31,6 @@ import {
 
 // EY Brand Colors
 const EY_YELLOW = '#FFE600';
-const EY_BLACK = '#2E2E38';
 
 // Interfaces for TypeScript validation
 interface Field {
@@ -39,6 +38,7 @@ interface Field {
   name: string;
   category?: string;
   type?: 'RAW' | 'SQL';
+  role?: 'dimension' | 'metric';
 }
 
 interface PivotConfig {
@@ -269,7 +269,7 @@ const App = () => {
 
 // --- Sub-Components ---
 
-const RecipientModal = ({ onClose, onSave }: { onClose: () => void; onSave: (p: any) => void }) => {
+const RecipientModal = ({ onClose, onSave }: { onClose: () => void; onSave: (p: Omit<Recipient, 'id'>) => void }) => {
   const [person, setPerson] = useState({ name: '', email: '', role: '' });
 
   return (
@@ -528,7 +528,7 @@ const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCan
     const updatedPivot = { ...report.pivot };
     Object.keys(updatedPivot).forEach(zoneKey => {
       const zone = zoneKey as keyof PivotConfig;
-      updatedPivot[zone] = updatedPivot[zone].filter(f => f.id !== field.id);
+      updatedPivot[zone] = updatedPivot[zone].filter((f: Field) => f.id !== field.id);
     });
     updatedPivot[targetZone] = [...updatedPivot[targetZone], field];
     setReport({ ...report, pivot: updatedPivot });
@@ -536,7 +536,7 @@ const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCan
 
   const removeFieldFromPivot = (fieldId: string, zone: keyof PivotConfig) => {
     const updatedPivot = { ...report.pivot };
-    updatedPivot[zone] = updatedPivot[zone].filter(f => f.id !== fieldId);
+    updatedPivot[zone] = updatedPivot[zone].filter((f: Field) => f.id !== fieldId);
     setReport({ ...report, pivot: updatedPivot });
   };
 
@@ -555,13 +555,13 @@ const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCan
 
   const availableFields: Field[] = [
     ...SAP_FIELDS.map(f => ({ ...f, type: 'RAW' as const })),
-    ...report.calculatedFields.map(cf => ({ id: cf.id, name: cf.label, type: 'SQL' as const }))
+    ...report.calculatedFields.map((cf: SQLMetric) => ({ id: cf.id, name: cf.label, type: 'SQL' as const }))
   ];
 
   const previewFields = [
-    ...(report.pivot.rows || []).map(f => ({ ...f, role: 'dimension' })),
-    ...(report.pivot.columns || []).map(f => ({ ...f, role: 'dimension' })),
-    ...(report.pivot.values || []).map(f => ({ ...f, role: 'metric' }))
+    ...(report.pivot.rows || []).map((f: Field) => ({ ...f, role: 'dimension' as const })),
+    ...(report.pivot.columns || []).map((f: Field) => ({ ...f, role: 'dimension' as const })),
+    ...(report.pivot.values || []).map((f: Field) => ({ ...f, role: 'metric' as const }))
   ];
 
   return (

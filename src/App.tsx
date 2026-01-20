@@ -76,6 +76,22 @@ interface Recipient {
   role: string;
 }
 
+interface StatCardProps {
+  title: string;
+  value: string | number;
+  icon: React.ReactNode;
+  trend: string;
+}
+
+interface PivotZoneProps {
+  label: string;
+  icon: React.ReactNode;
+  fields: Field[];
+  onDrop: (e: React.DragEvent) => void;
+  onRemove: (id: string) => void;
+  isValues?: boolean;
+}
+
 // Mock Data for the Prototype
 const SAP_FIELDS: Field[] = [
   { id: 'bukrs', name: 'Company Code', category: 'General' },
@@ -205,12 +221,12 @@ const App = () => {
       <aside className="w-64 bg-[#2E2E38] text-white flex flex-col shrink-0">
         <div className="p-6">
           <div className="flex items-center gap-3 mb-8">
-            <div className={`bg-[${EY_YELLOW}] p-2 rounded-sm shadow-sm shrink-0`} style={{ backgroundColor: EY_YELLOW }}>
+            <div className="p-2 rounded-sm shadow-sm shrink-0" style={{ backgroundColor: EY_YELLOW }}>
               <Database size={24} className="text-[#2E2E38]" />
             </div>
             <h1 className="font-bold text-lg leading-tight text-white uppercase tracking-tighter italic">
               Report Builder<br/>
-              <span className={`text-[${EY_YELLOW}] not-italic text-sm tracking-normal capitalize`} style={{ color: EY_YELLOW }}>
+              <span className="not-italic text-sm tracking-normal capitalize" style={{ color: EY_YELLOW }}>
                 & Distributor
               </span>
             </h1>
@@ -225,7 +241,7 @@ const App = () => {
 
         <div className="mt-auto p-6 border-t border-slate-700/50">
           <div className="flex items-center gap-3 mb-4">
-            <div className={`w-8 h-8 rounded-full bg-[${EY_YELLOW}] flex items-center justify-center text-sm font-bold text-[#2E2E38]`} style={{ backgroundColor: EY_YELLOW }}>SM</div>
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-[#2E2E38]" style={{ backgroundColor: EY_YELLOW }}>SM</div>
             <div>
               <p className="text-sm font-medium text-white">Senior Manager</p>
               <p className="text-xs text-slate-400">Finance Lead</p>
@@ -244,7 +260,7 @@ const App = () => {
             </button>
             <button 
               onClick={handleCreateNew}
-              className={`bg-[${EY_YELLOW}] hover:bg-[#E6CF00] text-[#2E2E38] px-4 py-2 rounded-lg flex items-center gap-2 transition-all font-bold shadow-sm`}
+              className="hover:bg-[#E6CF00] text-[#2E2E38] px-4 py-2 rounded-lg flex items-center gap-2 transition-all font-bold shadow-sm"
               style={{ backgroundColor: EY_YELLOW }}
             >
               <Plus size={18} /> New Template
@@ -274,10 +290,10 @@ const RecipientModal = ({ onClose, onSave }: { onClose: () => void; onSave: (p: 
 
   return (
     <div className="fixed inset-0 bg-[#2E2E38]/90 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-      <div className={`bg-white w-full max-w-md rounded-xl shadow-2xl overflow-hidden border border-[${EY_YELLOW}]/30 animate-in fade-in zoom-in duration-200`} style={{ borderColor: `${EY_YELLOW}4D` }}>
+      <div className="bg-white w-full max-w-md rounded-xl shadow-2xl overflow-hidden border animate-in fade-in zoom-in duration-200" style={{ borderColor: `${EY_YELLOW}4D` }}>
         <div className="bg-[#2E2E38] p-4 text-white flex justify-between items-center border-b border-[#FFE600]/30">
           <h3 className="font-bold text-sm flex items-center gap-2 italic uppercase tracking-tighter">
-            <UserPlus className={`text-[${EY_YELLOW}]`} style={{ color: EY_YELLOW }}/> Register New Recipient
+            <UserPlus style={{ color: EY_YELLOW }}/> Register New Recipient
           </h3>
           <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">✕</button>
         </div>
@@ -318,7 +334,7 @@ const RecipientModal = ({ onClose, onSave }: { onClose: () => void; onSave: (p: 
               onClose();
             }}
             disabled={!person.name || !person.email}
-            className={`w-full py-3 bg-[${EY_YELLOW}] text-[#2E2E38] font-bold rounded-lg shadow-lg hover:bg-[#E6CF00] transition-all disabled:opacity-50 uppercase tracking-tighter mt-4`}
+            className="w-full py-3 text-[#2E2E38] font-bold rounded-lg shadow-lg hover:bg-[#E6CF00] transition-all disabled:opacity-50 uppercase tracking-tighter mt-4"
             style={{ backgroundColor: EY_YELLOW }}
           >
             Register Recipient
@@ -333,7 +349,7 @@ const NavItem = ({ active, icon, label, onClick }: { active: boolean; icon: Reac
   <button 
     onClick={onClick}
     className={`w-full flex items-center gap-3 px-4 py-3 rounded-md transition-all ${
-      active ? `bg-[#FFE600] text-[#2E2E38] shadow-md font-bold` : 'text-slate-300 hover:text-white hover:bg-slate-700'
+      active ? 'text-[#2E2E38] shadow-md font-bold' : 'text-slate-300 hover:text-white hover:bg-slate-700'
     }`}
     style={active ? { backgroundColor: EY_YELLOW } : {}}
   >
@@ -353,7 +369,7 @@ const DashboardView = ({ reports, setActiveTab }: { reports: Report[]; setActive
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
         <h3 className="font-bold text-slate-800 tracking-tight">Recent Executions</h3>
-        <button onClick={() => setActiveTab('templates')} className={`text-[#2E2E38] text-sm font-bold border-b-2 border-[${EY_YELLOW}] hover:bg-[#FFE600]/10 px-1 transition-all`} style={{ borderColor: EY_YELLOW }}>View All</button>
+        <button onClick={() => setActiveTab('templates')} className="text-[#2E2E38] text-sm font-bold border-b-2 hover:bg-[#FFE600]/10 px-1 transition-all" style={{ borderColor: EY_YELLOW }}>View All</button>
       </div>
       <table className="w-full text-left">
         <thead className="bg-slate-50 text-slate-500 text-xs uppercase font-bold">
@@ -407,8 +423,7 @@ const TemplateListView = ({ reports, onEdit, onNew }: { reports: Report[]; onEdi
         <div 
           key={report.id} 
           onClick={() => onEdit(report)}
-          className={`bg-white border border-slate-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all group cursor-pointer relative border-t-4 border-t-slate-200 hover:border-t-[${EY_YELLOW}]`}
-          style={{ borderColor: `hover: ${EY_YELLOW}` }}
+          className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all group cursor-pointer relative border-t-4 border-t-slate-200 hover:border-t-yellow-400"
         >
           <div className="flex justify-between items-start mb-4">
             <div className={`p-2 rounded-lg ${
@@ -436,7 +451,7 @@ const TemplateListView = ({ reports, onEdit, onNew }: { reports: Report[]; onEdi
       ))}
       <button 
         onClick={onNew}
-        className={`border-2 border-dashed border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-slate-400 hover:border-[${EY_YELLOW}] hover:bg-[#FFE600]/5 hover:text-[#2E2E38] transition-all bg-white/50`}
+        className="border-2 border-dashed border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-slate-400 hover:border-yellow-400 hover:bg-yellow-50 hover:text-[#2E2E38] transition-all bg-white/50"
       >
         <Plus size={32} className="mb-2 opacity-50"/>
         <span className="font-bold uppercase tracking-tight text-sm">Create New Template</span>
@@ -471,7 +486,7 @@ const DistributionView = ({ recipients, onAddRecipient }: { recipients: Recipien
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
-          {recipients.map(person => (
+          {recipients.map((person: Recipient) => (
             <tr key={person.id} className="hover:bg-slate-50 transition-colors">
               <td className="px-6 py-4">
                 <div className="font-bold text-slate-800">{person.name}</div>
@@ -482,15 +497,15 @@ const DistributionView = ({ recipients, onAddRecipient }: { recipients: Recipien
               </td>
               <td className="px-6 py-4">
                 <div className="flex -space-x-2">
-                  {[1, 2].map(i => (
-                    <div key={i} className={`w-7 h-7 rounded-full bg-[${EY_YELLOW}] border-2 border-white flex items-center justify-center text-[10px] text-[#2E2E38] font-bold shadow-sm`} style={{ backgroundColor: EY_YELLOW }}>R{i}</div>
+                  {[1, 2].map((i: number) => (
+                    <div key={i} className="w-7 h-7 rounded-full border-2 border-white flex items-center justify-center text-[10px] text-[#2E2E38] font-bold shadow-sm" style={{ backgroundColor: EY_YELLOW }}>R{i}</div>
                   ))}
                   <div className="w-7 h-7 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-[10px] text-slate-400 font-bold">+1</div>
                 </div>
               </td>
               <td className="px-6 py-4 text-right">
                 <button className="text-slate-400 hover:text-red-600 transition-colors mr-3 text-sm font-bold">Remove</button>
-                <button className={`text-[#2E2E38] hover:text-black text-sm font-bold border-b-2 border-[${EY_YELLOW}] transition-colors`} style={{ borderColor: EY_YELLOW }}>Edit</button>
+                <button className="text-[#2E2E38] hover:text-black text-sm font-bold border-b-2 transition-colors" style={{ borderColor: EY_YELLOW }}>Edit</button>
               </td>
             </tr>
           ))}
@@ -500,7 +515,16 @@ const DistributionView = ({ recipients, onAddRecipient }: { recipients: Recipien
   </div>
 );
 
-const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCancel, onSave }: any) => {
+interface ReportBuilderProps {
+  report: Report;
+  setReport: (r: Report) => void;
+  allRecipients: Recipient[];
+  onAddRecipient: (p: Omit<Recipient, 'id'>) => Recipient;
+  onCancel: () => void;
+  onSave: (r: Report) => void;
+}
+
+const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCancel, onSave }: ReportBuilderProps) => {
   const [showSqlModal, setShowSqlModal] = useState(false);
   const [showRecipientModal, setShowRecipientModal] = useState(false);
   const [newSqlMetric, setNewSqlMetric] = useState({ label: '', sql: 'SELECT SUM({{dmbtr}}) \nFROM S4H_DATA \nWHERE Waers = \'USD\'' });
@@ -580,7 +604,7 @@ const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCan
         </div>
         <div className="flex gap-3">
           <button onClick={onCancel} className="px-4 py-2 text-slate-600 font-bold hover:bg-slate-200 rounded-lg transition-colors">Discard</button>
-          <button onClick={() => onSave(report)} className={`px-6 py-2 bg-[${EY_YELLOW}] text-[#2E2E38] font-bold rounded-lg shadow-sm hover:bg-[#E6CF00] transition-all border-b-2 border-[#2E2E38]/20 active:border-b-0 active:translate-y-0.5`} style={{ backgroundColor: EY_YELLOW }}>
+          <button onClick={() => onSave(report)} className="px-6 py-2 text-[#2E2E38] font-bold rounded-lg shadow-sm hover:bg-[#E6CF00] transition-all border-b-2 border-[#2E2E38]/20 active:border-b-0 active:translate-y-0.5" style={{ backgroundColor: EY_YELLOW }}>
             {report.id ? 'Update Report' : 'Save Report'}
           </button>
         </div>
@@ -608,7 +632,7 @@ const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCan
              <div>
                 <h4 className="text-[10px] font-bold text-slate-400 uppercase px-3 mb-2">Dimensions</h4>
                 <div className="space-y-0.5">
-                  {availableFields.filter(f => f.type === 'RAW').map(field => (
+                  {availableFields.filter((f: Field) => f.type === 'RAW').map((field: Field) => (
                     <div 
                       key={field.id} 
                       draggable
@@ -631,12 +655,12 @@ const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCan
                   <button onClick={() => setShowSqlModal(true)} className="text-[#2E2E38] hover:scale-110 transition-transform"><Plus size={12}/></button>
                 </h4>
                 <div className="space-y-0.5 px-1">
-                  {availableFields.filter(f => f.type === 'SQL').map(field => (
+                  {availableFields.filter((f: Field) => f.type === 'SQL').map((field: Field) => (
                     <div 
                       key={field.id} 
                       draggable
                       onDragStart={(e) => handleDragStart(e, field)}
-                      className={`group flex items-center justify-between p-2 bg-[${EY_YELLOW}]/10 rounded border border-[${EY_YELLOW}]/30 transition-all cursor-grab active:cursor-grabbing select-none`}
+                      className="group flex items-center justify-between p-2 rounded border transition-all cursor-grab active:cursor-grabbing select-none"
                       style={{ backgroundColor: `${EY_YELLOW}1A`, borderColor: `${EY_YELLOW}4D` }}
                     >
                       <div className="flex items-center gap-2 min-w-0">
@@ -653,9 +677,9 @@ const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCan
           <div className="p-4 border-t border-slate-200 bg-white">
              <button 
                onClick={() => setShowSqlModal(true)}
-               className={`w-full flex items-center justify-center gap-2 py-2.5 bg-[#2E2E38] text-white text-[13px] font-bold rounded shadow-lg hover:bg-black transition-all uppercase tracking-tighter`}
+               className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#2E2E38] text-white text-[13px] font-bold rounded shadow-lg hover:bg-black transition-all uppercase tracking-tighter"
              >
-               <Code2 size={16} className={`text-[${EY_YELLOW}]`} style={{ color: EY_YELLOW }}/> New SQL Metric
+               <Code2 size={16} style={{ color: EY_YELLOW }}/> New SQL Metric
              </button>
           </div>
         </div>
@@ -670,13 +694,13 @@ const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCan
               </label>
               
               <div className="grid grid-cols-2 gap-4">
-                <PivotZone label="Filters" icon={<ListFilter size={16}/>} fields={report.pivot.filters} onDrop={(e: any) => handleDrop(e, 'filters')} onRemove={(id: any) => removeFieldFromPivot(id, 'filters')} />
-                <PivotZone label="Columns" icon={<ColumnsIcon size={16}/>} fields={report.pivot.columns} onDrop={(e: any) => handleDrop(e, 'columns')} onRemove={(id: any) => removeFieldFromPivot(id, 'columns')} />
+                <PivotZone label="Filters" icon={<ListFilter size={16}/>} fields={report.pivot.filters} onDrop={(e: React.DragEvent) => handleDrop(e, 'filters')} onRemove={(id: string) => removeFieldFromPivot(id, 'filters')} />
+                <PivotZone label="Columns" icon={<ColumnsIcon size={16}/>} fields={report.pivot.columns} onDrop={(e: React.DragEvent) => handleDrop(e, 'columns')} onRemove={(id: string) => removeFieldFromPivot(id, 'columns')} />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <PivotZone label="Rows" icon={<RowsIcon size={16}/>} fields={report.pivot.rows} onDrop={(e: any) => handleDrop(e, 'rows')} onRemove={(id: any) => removeFieldFromPivot(id, 'rows')} />
-                <PivotZone label="Values" icon={<Sigma size={16}/>} fields={report.pivot.values} isValues onDrop={(e: any) => handleDrop(e, 'values')} onRemove={(id: any) => removeFieldFromPivot(id, 'values')} />
+                <PivotZone label="Rows" icon={<RowsIcon size={16}/>} fields={report.pivot.rows} onDrop={(e: React.DragEvent) => handleDrop(e, 'rows')} onRemove={(id: string) => removeFieldFromPivot(id, 'rows')} />
+                <PivotZone label="Values" icon={<Sigma size={16}/>} fields={report.pivot.values} isValues onDrop={(e: React.DragEvent) => handleDrop(e, 'values')} onRemove={(id: string) => removeFieldFromPivot(id, 'values')} />
               </div>
             </div>
 
@@ -703,7 +727,7 @@ const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCan
                   <table className="w-full text-left text-[12px] border-collapse">
                     <thead className="bg-slate-50 sticky top-0 z-10 border-b border-slate-200">
                       <tr>
-                        {previewFields.map(field => (
+                        {previewFields.map((field: Field) => (
                           <th key={field.id} className="px-4 py-3 font-bold text-[#2E2E38] uppercase tracking-tighter bg-white border-b-2 border-slate-100">
                             {field.role === 'metric' ? `Sum of ${field.name}` : field.name}
                           </th>
@@ -711,9 +735,9 @@ const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCan
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {MOCK_ROWS.map((row: any, idx) => (
+                      {MOCK_ROWS.map((row: any, idx: number) => (
                         <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                          {previewFields.map(field => (
+                          {previewFields.map((field: Field) => (
                             <td key={field.id} className="px-4 py-3 font-medium text-slate-600 tabular-nums border-r border-slate-50 last:border-r-0">
                               {field.type === 'SQL' ? (
                                 <span className="text-[#2E2E38] font-bold">{(row.dmbtr * (idx + 1)).toLocaleString()}</span>
@@ -733,7 +757,7 @@ const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCan
             {/* Metadata and Quick Add Distribution */}
             <section className="bg-white p-6 border border-slate-200 rounded-xl shadow-sm space-y-6">
               <h3 className="text-sm font-bold text-[#2E2E38] uppercase italic flex items-center gap-2">
-                <Info size={16} className={`text-[${EY_YELLOW}]`} style={{ color: EY_YELLOW }}/> Report Metadata
+                <Info size={16} style={{ color: EY_YELLOW }}/> Report Metadata
               </h3>
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-4">
@@ -766,7 +790,7 @@ const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCan
                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Selected Recipients</span>
                     <button 
                       onClick={() => setShowRecipientModal(true)}
-                      className={`text-[10px] text-[#2E2E38] font-bold uppercase italic flex items-center gap-1 hover:underline`}
+                      className="text-[10px] text-[#2E2E38] font-bold uppercase italic flex items-center gap-1 hover:underline"
                     >
                       <UserPlus size={12}/> Register New
                     </button>
@@ -797,7 +821,7 @@ const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCan
         <div className="w-64 border-l border-slate-200 p-6 bg-slate-50 flex flex-col gap-8 shrink-0">
            <section className="space-y-3">
               <div className="text-[#2E2E38] font-bold text-[11px] uppercase tracking-wider flex items-center gap-2 italic">
-                <Calendar size={14} className={`text-[${EY_YELLOW}]`} style={{ color: EY_YELLOW }}/> Frequency
+                <Calendar size={14} style={{ color: EY_YELLOW }}/> Frequency
               </div>
               <div className="space-y-1">
                 {['Daily', 'Weekly', 'Monthly'].map(freq => (
@@ -809,7 +833,7 @@ const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCan
                     }`}
                   >
                     {freq}
-                    {report.frequency === freq && <CheckCircle2 size={12} className={`text-[${EY_YELLOW}]`} style={{ color: EY_YELLOW }}/>}
+                    {report.frequency === freq && <CheckCircle2 size={12} style={{ color: EY_YELLOW }}/>}
                   </button>
                 ))}
               </div>
@@ -817,7 +841,7 @@ const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCan
 
            <section className="space-y-3">
               <div className="text-[#2E2E38] font-bold text-[11px] uppercase tracking-wider flex items-center gap-2 italic">
-                <Download size={14} className={`text-[${EY_YELLOW}]`} style={{ color: EY_YELLOW }}/> Export Format
+                <Download size={14} style={{ color: EY_YELLOW }}/> Export Format
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {['Excel', 'PDF'].map(fmt => (
@@ -825,7 +849,7 @@ const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCan
                     key={fmt}
                     onClick={() => setReport({...report, format: fmt})}
                     className={`py-3 text-[11px] font-bold rounded-md border transition-all ${
-                      report.format === fmt ? `bg-[${EY_YELLOW}] text-[#2E2E38] border-[${EY_YELLOW}] shadow-sm` : 'bg-white text-slate-400 border border-slate-200 hover:border-[#FFE600]'
+                      report.format === fmt ? 'text-[#2E2E38] shadow-sm' : 'bg-white text-slate-400 border border-slate-200 hover:border-[#FFE600]'
                     }`}
                     style={report.format === fmt ? { backgroundColor: EY_YELLOW, borderColor: EY_YELLOW } : {}}
                   >
@@ -835,10 +859,10 @@ const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCan
               </div>
            </section>
 
-           <div className={`mt-auto p-4 bg-[#2E2E38] rounded-xl shadow-lg text-center border-t-4 border-t-[${EY_YELLOW}]`} style={{ borderTopColor: EY_YELLOW }}>
-              <Database size={24} className={`text-[${EY_YELLOW}] mx-auto mb-2`} style={{ color: EY_YELLOW }}/>
+           <div className="mt-auto p-4 bg-[#2E2E38] rounded-xl shadow-lg text-center border-t-4" style={{ borderTopColor: EY_YELLOW }}>
+              <Database size={24} className="mx-auto mb-2" style={{ color: EY_YELLOW }}/>
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none mb-1">Pivot Engine</p>
-              <p className={`text-[11px] text-[${EY_YELLOW}] font-bold tracking-tighter uppercase italic`} style={{ color: EY_YELLOW }}>Ready for S/4 Sync</p>
+              <p className="text-[11px] font-bold tracking-tighter uppercase italic" style={{ color: EY_YELLOW }}>Ready for S/4 Sync</p>
            </div>
         </div>
       </div>
@@ -847,7 +871,7 @@ const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCan
       {showRecipientModal && (
         <RecipientModal 
           onClose={() => setShowRecipientModal(false)}
-          onSave={(p) => {
+          onSave={(p: Omit<Recipient, 'id'>) => {
             const added = onAddRecipient(p);
             setReport({ ...report, recipients: [...(report.recipients || []), added.id] });
           }}
@@ -857,10 +881,10 @@ const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCan
       {/* SQL MODAL */}
       {showSqlModal && (
         <div className="fixed inset-0 bg-[#2E2E38]/90 backdrop-blur-md z-[60] flex items-center justify-center p-4">
-           <div className={`bg-white w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 border border-[${EY_YELLOW}]/30`} style={{ borderColor: `${EY_YELLOW}4D` }}>
+           <div className="bg-white w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 border" style={{ borderColor: `${EY_YELLOW}4D` }}>
               <div className="bg-[#2E2E38] p-5 text-white flex justify-between items-center border-b border-[#FFE600]/30">
                  <h3 className="font-bold text-sm flex items-center gap-2 italic uppercase tracking-tighter">
-                   <Code2 className={`text-[${EY_YELLOW}]`} style={{ color: EY_YELLOW }}/> EY SQL Metric Editor
+                   <Code2 style={{ color: EY_YELLOW }}/> EY SQL Metric Editor
                  </h3>
                  <button onClick={() => setShowSqlModal(false)} className="text-slate-400 hover:text-white transition-colors">✕</button>
               </div>
@@ -882,12 +906,12 @@ const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCan
                       <span className="text-[9px] lowercase italic font-normal text-slate-300 bg-[#2E2E38] px-1.5 py-0.5 rounded">Syntax: {'{{SAP_FIELD}}'}</span>
                     </label>
                     <div className="relative font-mono group">
-                      <div className={`absolute top-2 right-2 text-[9px] text-[${EY_YELLOW}]/30 group-hover:text-[#FFE600]/60 transition-colors uppercase`} style={{ color: `${EY_YELLOW}4D` }}>Production View</div>
+                      <div className="absolute top-2 right-2 text-[9px] uppercase" style={{ color: `${EY_YELLOW}4D` }}>Production View</div>
                       <textarea 
                         rows={6}
                         value={newSqlMetric.sql}
                         onChange={e => setNewSqlMetric({...newSqlMetric, sql: e.target.value})}
-                        className={`w-full p-4 bg-[#2E2E38] text-[${EY_YELLOW}] rounded-lg border-2 border-slate-800 focus:border-[#FFE600] outline-none text-[13px] leading-relaxed resize-none shadow-inner`}
+                        className="w-full p-4 bg-[#2E2E38] rounded-lg border-2 border-slate-800 focus:border-[#FFE600] outline-none text-[13px] leading-relaxed resize-none shadow-inner"
                         style={{ color: EY_YELLOW }}
                       />
                     </div>
@@ -898,7 +922,7 @@ const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCan
                     <button 
                       onClick={addSqlMetric}
                       disabled={!newSqlMetric.label || !newSqlMetric.sql}
-                      className={`px-8 py-2 bg-[${EY_YELLOW}] text-[#2E2E38] font-bold rounded-lg shadow-lg hover:bg-[#E6CF00] transition-all disabled:opacity-50 uppercase tracking-tighter`}
+                      className="px-8 py-2 text-[#2E2E38] font-bold rounded-lg shadow-lg hover:bg-[#E6CF00] transition-all disabled:opacity-50 uppercase tracking-tighter"
                       style={{ backgroundColor: EY_YELLOW }}
                     >
                       Commit Logic
@@ -912,20 +936,20 @@ const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCan
   );
 };
 
-const PivotZone = ({ label, icon, fields, onDrop, onRemove, isValues = false }: any) => {
+const PivotZone = ({ label, icon, fields, onDrop, onRemove, isValues = false }: PivotZoneProps) => {
   const [isOver, setIsOver] = useState(false);
 
   return (
     <div 
-      onDragOver={(e) => { e.preventDefault(); setIsOver(true); }}
+      onDragOver={(e: React.DragEvent) => { e.preventDefault(); setIsOver(true); }}
       onDragLeave={() => setIsOver(false)}
-      onDrop={(e) => { setIsOver(false); onDrop(e); }}
+      onDrop={(e: React.DragEvent) => { setIsOver(false); onDrop(e); }}
       className={`bg-white border-2 rounded-xl overflow-hidden flex flex-col shadow-sm min-h-[160px] transition-all duration-200 ${
-        isOver ? `border-[#FFE600] bg-[#FFE600]/5 scale-[1.02] shadow-md` : 'border-slate-100 hover:border-slate-200'
+        isOver ? `scale-[1.02] shadow-md` : 'border-slate-100 hover:border-slate-200'
       }`}
       style={isOver ? { borderColor: EY_YELLOW, backgroundColor: `${EY_YELLOW}0D` } : {}}
     >
-      <div className={`p-3 border-b flex items-center justify-between ${isOver ? `bg-[#FFE600]/20 border-[#FFE600]/30` : 'bg-slate-50 border-slate-100'}`} style={isOver ? { backgroundColor: `${EY_YELLOW}33`, borderColor: `${EY_YELLOW}4D` } : {}}>
+      <div className={`p-3 border-b flex items-center justify-between ${isOver ? 'bg-opacity-20 border-opacity-30' : 'bg-slate-50 border-slate-100'}`} style={isOver ? { backgroundColor: `${EY_YELLOW}33`, borderColor: `${EY_YELLOW}4D` } : {}}>
         <div className="flex items-center gap-2">
           <div className="text-[#2E2E38]">{icon}</div>
           <span className="text-[11px] font-bold text-[#2E2E38] uppercase tracking-widest">{label}</span>
@@ -939,10 +963,8 @@ const PivotZone = ({ label, icon, fields, onDrop, onRemove, isValues = false }: 
              <span className="text-[9px] font-bold uppercase tracking-widest text-center">Drag Technical<br/>Dimensions Here</span>
           </div>
         ) : (
-          fields.map((field: any) => (
-            <div key={field.id} className={`flex items-center justify-between p-2 rounded-md text-[11px] font-bold shadow-sm border group animate-in slide-in-from-left-2 duration-200 ${
-              field.type === 'SQL' ? `bg-[#FFE600]/20 border-[#FFE600] text-[#2E2E38]` : 'bg-slate-50 border-slate-200 text-slate-600'
-            }`} style={field.type === 'SQL' ? { backgroundColor: `${EY_YELLOW}33`, borderColor: EY_YELLOW } : {}}>
+          fields.map((field: Field) => (
+            <div key={field.id} className="flex items-center justify-between p-2 rounded-md text-[11px] font-bold shadow-sm border group animate-in slide-in-from-left-2 duration-200" style={field.type === 'SQL' ? { backgroundColor: `${EY_YELLOW}33`, borderColor: EY_YELLOW, color: '#2E2E38' } : { backgroundColor: '#f8fafc', borderColor: '#e2e8f0', color: '#475569' }}>
               <div className="flex items-center gap-2 truncate pr-2">
                 <GripVertical size={10} className="text-slate-300"/>
                 <span className="truncate tracking-tight">{isValues && field.type === 'RAW' ? `Sum of ${field.name}` : field.name}</span>
@@ -958,8 +980,8 @@ const PivotZone = ({ label, icon, fields, onDrop, onRemove, isValues = false }: 
   );
 };
 
-const StatCard = ({ title, value, icon, trend }: { title: string; value: any; icon: React.ReactNode; trend: string }) => (
-  <div className={`bg-white p-6 rounded-xl border border-slate-200 shadow-sm border-t-4 border-t-[${EY_YELLOW}] transition-all hover:shadow-md hover:-translate-y-1`} style={{ borderTopColor: EY_YELLOW }}>
+const StatCard = ({ title, value, icon, trend }: StatCardProps) => (
+  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm border-t-4 transition-all hover:shadow-md hover:-translate-y-1" style={{ borderTopColor: EY_YELLOW }}>
     <div className="flex justify-between items-start mb-4">
       <div className="p-2 bg-slate-50 rounded-lg">{icon}</div>
       <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{title}</span>

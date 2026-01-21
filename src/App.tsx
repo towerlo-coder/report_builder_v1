@@ -148,7 +148,7 @@ const INITIAL_RECIPIENTS: Recipient[] = [
   { id: 3, name: 'Robert Brown', email: 'audit_team@company.com', role: 'Auditor' },
 ];
 
-const MOCK_ROWS = [
+const MOCK_ROWS: any[] = [
   { bukrs: '1000', belnr: '18000042', gjahr: '2023', budat: '2023-10-01', waers: 'USD', kunnr: 'C0042', lifnr: 'V9901', dmbtr: 4500.00, wrbtr: 4500.00, zterm: 'N30', hkont: '110000' },
   { bukrs: '1000', belnr: '18000043', gjahr: '2023', budat: '2023-10-02', waers: 'EUR', kunnr: 'C0055', lifnr: 'V8822', dmbtr: 1250.50, wrbtr: 1080.20, zterm: 'N15', hkont: '110000' },
   { bukrs: '2100', belnr: '19000121', gjahr: '2023', budat: '2023-10-05', waers: 'GBP', kunnr: 'C0012', lifnr: 'V7744', dmbtr: 8900.00, wrbtr: 6850.00, zterm: 'N60', hkont: '210000' },
@@ -332,17 +332,13 @@ const App = () => {
           onClose={() => setIsAiAgentOpen(false)} 
           reports={reports} 
           recipients={recipients}
-          onAction={(type: string, data: any) => {
-             if(type === 'CREATE_REPORT') handleSaveReport(data);
-             setIsAiAgentOpen(false);
-          }}
         />
       )}
     </div>
   );
 };
 
-const GlobalAiAgent = ({ onClose, reports, recipients, onAction }: any) => {
+const GlobalAiAgent = ({ onClose, reports, recipients }: any) => {
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [messages, setMessages] = useState([

@@ -26,11 +26,19 @@ import {
   Sigma,
   Eye,
   UserPlus,
-  Pencil
+  Pencil,
+  Bot,
+  Sparkles,
+  X,
+  SendHorizontal,
+  RefreshCw
 } from 'lucide-react';
 
 // EY Brand Colors
 const EY_YELLOW = '#FFE600';
+
+// API Configuration
+const apiKey = "";
 
 // Interfaces for TypeScript validation
 interface Field {
@@ -148,6 +156,28 @@ const MOCK_ROWS = [
   { bukrs: '3000', belnr: '20000550', gjahr: '2023', budat: '2023-10-10', waers: 'USD', kunnr: 'C0200', lifnr: 'V3301', dmbtr: 15400.75, wrbtr: 15400.75, zterm: 'N30', hkont: '400000' },
 ];
 
+const callGemini = async (prompt: string, systemInstruction: string) => {
+  let delay = 1000;
+  for (let i = 0; i < 5; i++) {
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          systemInstruction: { parts: [{ text: systemInstruction }] }
+        })
+      });
+      const result = await response.json();
+      return result.candidates?.[0]?.content?.parts?.[0]?.text;
+    } catch (error) {
+      if (i === 4) throw error;
+      await new Promise(res => setTimeout(res, delay));
+      delay *= 2;
+    }
+  }
+};
+
 const App = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [reports, setReports] = useState<Report[]>(INITIAL_REPORTS);
@@ -155,6 +185,7 @@ const App = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [currentReport, setCurrentReport] = useState<Report | null>(null);
   const [isGlobalRecipientModalOpen, setIsGlobalRecipientModalOpen] = useState(false);
+  const [isAiAgentOpen, setIsAiAgentOpen] = useState(false);
 
   const handleEditReport = (report: Report) => {
     setCurrentReport(report);
@@ -203,82 +234,208 @@ const App = () => {
     }
   };
 
-  if (isCreating && currentReport) {
-    return (
-      <ReportBuilder 
-        report={currentReport} 
-        setReport={setCurrentReport} 
-        allRecipients={recipients}
-        onAddRecipient={handleAddRecipient}
-        onCancel={() => setIsCreating(false)} 
-        onSave={handleSaveReport}
-      />
-    );
-  }
+  return (
+    <div className="h-screen w-screen overflow-hidden relative">
+      {/* Main App Canvas */}
+      {isCreating && currentReport ? (
+        <ReportBuilder 
+          report={currentReport} 
+          setReport={setCurrentReport} 
+          allRecipients={recipients}
+          onAddRecipient={handleAddRecipient}
+          onCancel={() => setIsCreating(false)} 
+          onSave={handleSaveReport}
+        />
+      ) : (
+        <div className="flex h-full bg-slate-50 text-slate-900 font-sans">
+          <aside className="w-64 bg-[#2E2E38] text-white flex flex-col shrink-0">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-8">
+                <div className="p-2 rounded-sm shadow-sm shrink-0" style={{ backgroundColor: EY_YELLOW }}>
+                  <Database size={24} className="text-[#2E2E38]" />
+                </div>
+                <h1 className="font-bold text-lg leading-tight text-white uppercase tracking-tighter italic">
+                  Document<br/>
+                  <span className="not-italic text-sm tracking-normal capitalize" style={{ color: EY_YELLOW }}>
+                    Extraction
+                  </span>
+                </h1>
+              </div>
+              
+              <nav className="space-y-2">
+                <NavItem active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<LayoutDashboard size={20}/>} label="Dashboard" />
+                <NavItem active={activeTab === 'templates'} onClick={() => setActiveTab('templates')} icon={<FileSpreadsheet size={20}/>} label="Report Templates" />
+                <NavItem active={activeTab === 'distribution'} onClick={() => setActiveTab('distribution')} icon={<Users size={20}/>} label="Distribution Lists" />
+              </nav>
+            </div>
+
+            <div className="mt-auto p-6 border-t border-slate-700/50">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-[#2E2E38]" style={{ backgroundColor: EY_YELLOW }}>SM</div>
+                <div>
+                  <p className="text-sm font-medium text-white">Senior Manager</p>
+                  <p className="text-xs text-slate-400">Finance Lead</p>
+                </div>
+              </div>
+              <NavItem active={false} onClick={() => {}} icon={<Settings size={20}/>} label="Settings" />
+            </div>
+          </aside>
+
+          <main className="flex-1 overflow-y-auto">
+            <header className="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center sticky top-0 z-10">
+              <h2 className="text-xl font-semibold capitalize tracking-tight text-[#2E2E38]">{activeTab.replace('-', ' ')}</h2>
+              <div className="flex items-center gap-4">
+                <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors">
+                  <Search size={20} />
+                </button>
+                <button 
+                  onClick={handleCreateNew}
+                  className="hover:bg-[#E6CF00] text-[#2E2E38] px-4 py-2 rounded-lg flex items-center gap-2 transition-all font-bold shadow-sm"
+                  style={{ backgroundColor: EY_YELLOW }}
+                >
+                  <Plus size={18} /> New Template
+                </button>
+              </div>
+            </header>
+
+            <div className="p-8 max-w-7xl mx-auto">
+              {renderContent()}
+            </div>
+
+            {isGlobalRecipientModalOpen && (
+              <RecipientModal 
+                onClose={() => setIsGlobalRecipientModalOpen(false)}
+                onSave={handleAddRecipient}
+              />
+            )}
+          </main>
+        </div>
+      )}
+
+      {/* GLOBAL AI AGENT TOGGLE - PERSISTENT ACROSS VIEWS */}
+      <button 
+        onClick={() => setIsAiAgentOpen(true)}
+        className="fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 group z-50 border-4 border-white"
+        style={{ backgroundColor: EY_YELLOW }}
+      >
+        <Bot className="text-[#2E2E38] group-hover:animate-bounce" size={28}/>
+        {!isAiAgentOpen && (
+          <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full animate-pulse">
+            1
+          </div>
+        )}
+      </button>
+
+      {/* GLOBAL AI AGENT DRAWER */}
+      {isAiAgentOpen && (
+        <GlobalAiAgent 
+          onClose={() => setIsAiAgentOpen(false)} 
+          reports={reports} 
+          recipients={recipients}
+          onAction={(type: string, data: any) => {
+             if(type === 'CREATE_REPORT') handleSaveReport(data);
+             setIsAiAgentOpen(false);
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
+const GlobalAiAgent = ({ onClose, reports, recipients, onAction }: any) => {
+  const [input, setInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [messages, setMessages] = useState([
+    { role: 'ai', text: "Hello! I'm your Finance Reporting Assistant. I can help you create templates or manage distribution lists. What can I do for you today?" }
+  ]);
+
+  const commonQuestions = [
+    "Create a monthly AR report for Jane Smith",
+    "Who is on the Weekly AP distribution list?",
+    "Generate a new GL template for USD transactions",
+    "List all active report templates"
+  ];
+
+  const handleSend = async (text: string) => {
+    if (!text.trim()) return;
+    const userMsg = { role: 'user', text };
+    setMessages(prev => [...prev, userMsg]);
+    setInput('');
+    setIsTyping(true);
+
+    try {
+      const prompt = `User Request: "${text}". Current Reports: ${JSON.stringify(reports)}. Current Recipients: ${JSON.stringify(recipients)}. Field Schema: ${JSON.stringify(SAP_FIELDS)}. 
+      Return a response that helps the user. If they want to create a report, suggest the specific fields, rows, and values needed in a structured way.`;
+      
+      const response = await callGemini(prompt, "You are a senior finance report architect. Help the user manage templates and recipients. Be concise, professional, and EY-branded.");
+      setMessages(prev => [...prev, { role: 'ai', text: response || "I encountered an error processing your request." }]);
+    } catch (err) {
+      setMessages(prev => [...prev, { role: 'ai', text: "I'm sorry, I'm having trouble connecting to the brain right now." }]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
 
   return (
-    <div className="flex h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden">
-      <aside className="w-64 bg-[#2E2E38] text-white flex flex-col shrink-0">
-        <div className="p-6">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="p-2 rounded-sm shadow-sm shrink-0" style={{ backgroundColor: EY_YELLOW }}>
-              <Database size={24} className="text-[#2E2E38]" />
-            </div>
-            <h1 className="font-bold text-lg leading-tight text-white uppercase tracking-tighter italic">
-              Report Builder<br/>
-              <span className="not-italic text-sm tracking-normal capitalize" style={{ color: EY_YELLOW }}>
-                & Distributor
-              </span>
-            </h1>
-          </div>
-          
-          <nav className="space-y-2">
-            <NavItem active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<LayoutDashboard size={20}/>} label="Dashboard" />
-            <NavItem active={activeTab === 'templates'} onClick={() => setActiveTab('templates')} icon={<FileSpreadsheet size={20}/>} label="Report Templates" />
-            <NavItem active={activeTab === 'distribution'} onClick={() => setActiveTab('distribution')} icon={<Users size={20}/>} label="Distribution Lists" />
-          </nav>
+    <div className="fixed bottom-0 right-0 w-96 h-[600px] bg-white shadow-2xl rounded-tl-2xl flex flex-col z-[100] border-l border-t border-slate-200 animate-in slide-in-from-right duration-300">
+      <div className="p-4 bg-[#2E2E38] text-white flex justify-between items-center rounded-tl-2xl">
+        <div className="flex items-center gap-2">
+          <Bot size={20} style={{ color: EY_YELLOW }}/>
+          <h3 className="font-bold text-sm tracking-widest uppercase italic">Finance AI Co-Pilot</h3>
         </div>
+        <button onClick={onClose} className="hover:text-white text-slate-400 p-1"><X size={20}/></button>
+      </div>
 
-        <div className="mt-auto p-6 border-t border-slate-700/50">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-[#2E2E38]" style={{ backgroundColor: EY_YELLOW }}>SM</div>
-            <div>
-              <p className="text-sm font-medium text-white">Senior Manager</p>
-              <p className="text-xs text-slate-400">Finance Lead</p>
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 scrollbar-hide">
+        {messages.map((m, i) => (
+          <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[85%] p-3 rounded-2xl text-[13px] font-medium shadow-sm leading-relaxed ${
+              m.role === 'user' ? 'bg-[#2E2E38] text-white rounded-tr-none' : 'bg-white text-slate-700 rounded-tl-none border border-slate-200'
+            }`}>
+              {m.text}
             </div>
           </div>
-          <NavItem active={false} onClick={() => {}} icon={<Settings size={20}/>} label="Settings" />
-        </div>
-      </aside>
-
-      <main className="flex-1 overflow-y-auto">
-        <header className="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center sticky top-0 z-10">
-          <h2 className="text-xl font-semibold capitalize tracking-tight text-[#2E2E38]">{activeTab.replace('-', ' ')}</h2>
-          <div className="flex items-center gap-4">
-            <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors">
-              <Search size={20} />
-            </button>
-            <button 
-              onClick={handleCreateNew}
-              className="hover:bg-[#E6CF00] text-[#2E2E38] px-4 py-2 rounded-lg flex items-center gap-2 transition-all font-bold shadow-sm"
-              style={{ backgroundColor: EY_YELLOW }}
-            >
-              <Plus size={18} /> New Template
-            </button>
+        ))}
+        {isTyping && (
+          <div className="flex justify-start">
+            <div className="bg-white p-3 rounded-2xl rounded-tl-none shadow-sm border border-slate-200 flex gap-1">
+              <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></span>
+              <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-100"></span>
+              <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-200"></span>
+            </div>
           </div>
-        </header>
-
-        <div className="p-8 max-w-7xl mx-auto">
-          {renderContent()}
-        </div>
-
-        {isGlobalRecipientModalOpen && (
-          <RecipientModal 
-            onClose={() => setIsGlobalRecipientModalOpen(false)}
-            onSave={handleAddRecipient}
-          />
         )}
-      </main>
+      </div>
+
+      <div className="p-4 bg-white border-t border-slate-100">
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {commonQuestions.map(q => (
+            <button 
+              key={q} 
+              onClick={() => handleSend(q)}
+              className="text-[10px] bg-slate-50 hover:bg-[#FFE600]/10 border border-slate-200 hover:border-[#FFE600] rounded-full px-2.5 py-1 transition-all text-slate-500 font-bold"
+            >
+              {q}
+            </button>
+          ))}
+        </div>
+        <div className="relative">
+          <input 
+            type="text" 
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleSend(input)}
+            placeholder="Ask me to build a report..."
+            className="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-[#FFE600] outline-none text-sm font-medium"
+          />
+          <button 
+            onClick={() => handleSend(input)}
+            className="absolute right-2 top-1.5 p-1.5 rounded-lg text-[#2E2E38] hover:bg-[#FFE600] transition-colors"
+          >
+            <SendHorizontal size={20}/>
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
@@ -290,7 +447,7 @@ const RecipientModal = ({ onClose, onSave }: { onClose: () => void; onSave: (p: 
 
   return (
     <div className="fixed inset-0 bg-[#2E2E38]/90 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-md rounded-xl shadow-2xl overflow-hidden border animate-in fade-in zoom-in duration-200" style={{ borderColor: `${EY_YELLOW}4D` }}>
+      <div className={`bg-white w-full max-w-md rounded-xl shadow-2xl overflow-hidden border animate-in fade-in zoom-in duration-200`} style={{ borderColor: `${EY_YELLOW}4D` }}>
         <div className="bg-[#2E2E38] p-4 text-white flex justify-between items-center border-b border-[#FFE600]/30">
           <h3 className="font-bold text-sm flex items-center gap-2 italic uppercase tracking-tighter">
             <UserPlus style={{ color: EY_YELLOW }}/> Register New Recipient
@@ -349,7 +506,7 @@ const NavItem = ({ active, icon, label, onClick }: { active: boolean; icon: Reac
   <button 
     onClick={onClick}
     className={`w-full flex items-center gap-3 px-4 py-3 rounded-md transition-all ${
-      active ? 'text-[#2E2E38] shadow-md font-bold' : 'text-slate-300 hover:text-white hover:bg-slate-700'
+      active ? `text-[#2E2E38] shadow-md font-bold` : 'text-slate-300 hover:text-white hover:bg-slate-700'
     }`}
     style={active ? { backgroundColor: EY_YELLOW } : {}}
   >
@@ -369,7 +526,7 @@ const DashboardView = ({ reports, setActiveTab }: { reports: Report[]; setActive
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
         <h3 className="font-bold text-slate-800 tracking-tight">Recent Executions</h3>
-        <button onClick={() => setActiveTab('templates')} className="text-[#2E2E38] text-sm font-bold border-b-2 hover:bg-[#FFE600]/10 px-1 transition-all" style={{ borderColor: EY_YELLOW }}>View All</button>
+        <button onClick={() => setActiveTab('templates')} className={`text-[#2E2E38] text-sm font-bold border-b-2 hover:bg-[#FFE600]/10 px-1 transition-all`} style={{ borderColor: EY_YELLOW }}>View All</button>
       </div>
       <table className="w-full text-left">
         <thead className="bg-slate-50 text-slate-500 text-xs uppercase font-bold">
@@ -505,7 +662,7 @@ const DistributionView = ({ recipients, onAddRecipient }: { recipients: Recipien
               </td>
               <td className="px-6 py-4 text-right">
                 <button className="text-slate-400 hover:text-red-600 transition-colors mr-3 text-sm font-bold">Remove</button>
-                <button className="text-[#2E2E38] hover:text-black text-sm font-bold border-b-2 transition-colors" style={{ borderColor: EY_YELLOW }}>Edit</button>
+                <button className={`text-[#2E2E38] hover:text-black text-sm font-bold border-b-2 transition-colors`} style={{ borderColor: EY_YELLOW }}>Edit</button>
               </td>
             </tr>
           ))}
@@ -529,6 +686,22 @@ const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCan
   const [showRecipientModal, setShowRecipientModal] = useState(false);
   const [newSqlMetric, setNewSqlMetric] = useState({ label: '', sql: 'SELECT SUM({{dmbtr}}) \nFROM S4H_DATA \nWHERE Waers = \'USD\'' });
   const [draggedField, setDraggedField] = useState<Field | null>(null);
+  const [aiSqlPrompt, setAiSqlPrompt] = useState('');
+  const [isAiGenerating, setIsAiGenerating] = useState(false);
+
+  const handleAiSqlGen = async () => {
+    if(!aiSqlPrompt.trim()) return;
+    setIsAiGenerating(true);
+    try {
+      const prompt = `Based on these available SAP fields: ${JSON.stringify(SAP_FIELDS)}, generate a SQL SELECT statement for the following requirement: "${aiSqlPrompt}". Only return the SQL code block. Use {{field_id}} syntax to reference fields.`;
+      const sql = await callGemini(prompt, "You are a SQL expert for SAP S/4HANA systems.");
+      setNewSqlMetric({ ...newSqlMetric, sql: sql?.replace(/```sql|```/g, '').trim() || "" });
+    } catch (e) {
+      // Error handled by modal UI
+    } finally {
+      setIsAiGenerating(false);
+    }
+  };
 
   const addSqlMetric = () => {
     if (!newSqlMetric.label || !newSqlMetric.sql) return;
@@ -604,7 +777,7 @@ const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCan
         </div>
         <div className="flex gap-3">
           <button onClick={onCancel} className="px-4 py-2 text-slate-600 font-bold hover:bg-slate-200 rounded-lg transition-colors">Discard</button>
-          <button onClick={() => onSave(report)} className="px-6 py-2 text-[#2E2E38] font-bold rounded-lg shadow-sm hover:bg-[#E6CF00] transition-all border-b-2 border-[#2E2E38]/20 active:border-b-0 active:translate-y-0.5" style={{ backgroundColor: EY_YELLOW }}>
+          <button onClick={() => onSave(report)} className={`px-6 py-2 text-[#2E2E38] font-bold rounded-lg shadow-sm hover:bg-[#E6CF00] transition-all border-b-2 border-[#2E2E38]/20 active:border-b-0 active:translate-y-0.5`} style={{ backgroundColor: EY_YELLOW }}>
             {report.id ? 'Update Report' : 'Save Report'}
           </button>
         </div>
@@ -660,7 +833,7 @@ const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCan
                       key={field.id} 
                       draggable
                       onDragStart={(e) => handleDragStart(e, field)}
-                      className="group flex items-center justify-between p-2 rounded border transition-all cursor-grab active:cursor-grabbing select-none"
+                      className={`group flex items-center justify-between p-2 rounded border transition-all cursor-grab active:cursor-grabbing select-none`}
                       style={{ backgroundColor: `${EY_YELLOW}1A`, borderColor: `${EY_YELLOW}4D` }}
                     >
                       <div className="flex items-center gap-2 min-w-0">
@@ -677,7 +850,7 @@ const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCan
           <div className="p-4 border-t border-slate-200 bg-white">
              <button 
                onClick={() => setShowSqlModal(true)}
-               className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#2E2E38] text-white text-[13px] font-bold rounded shadow-lg hover:bg-black transition-all uppercase tracking-tighter"
+               className={`w-full flex items-center justify-center gap-2 py-2.5 bg-[#2E2E38] text-white text-[13px] font-bold rounded shadow-lg hover:bg-black transition-all uppercase tracking-tighter`}
              >
                <Code2 size={16} style={{ color: EY_YELLOW }}/> New SQL Metric
              </button>
@@ -790,7 +963,7 @@ const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCan
                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Selected Recipients</span>
                     <button 
                       onClick={() => setShowRecipientModal(true)}
-                      className="text-[10px] text-[#2E2E38] font-bold uppercase italic flex items-center gap-1 hover:underline"
+                      className={`text-[10px] text-[#2E2E38] font-bold uppercase italic flex items-center gap-1 hover:underline`}
                     >
                       <UserPlus size={12}/> Register New
                     </button>
@@ -874,22 +1047,59 @@ const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCan
           onSave={(p: Omit<Recipient, 'id'>) => {
             const added = onAddRecipient(p);
             setReport({ ...report, recipients: [...(report.recipients || []), added.id] });
+            return added;
           }}
         />
       )}
 
-      {/* SQL MODAL */}
+      {/* SQL MODAL WITH AI AGENT */}
       {showSqlModal && (
         <div className="fixed inset-0 bg-[#2E2E38]/90 backdrop-blur-md z-[60] flex items-center justify-center p-4">
-           <div className="bg-white w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 border" style={{ borderColor: `${EY_YELLOW}4D` }}>
-              <div className="bg-[#2E2E38] p-5 text-white flex justify-between items-center border-b border-[#FFE600]/30">
-                 <h3 className="font-bold text-sm flex items-center gap-2 italic uppercase tracking-tighter">
-                   <Code2 style={{ color: EY_YELLOW }}/> EY SQL Metric Editor
-                 </h3>
-                 <button onClick={() => setShowSqlModal(false)} className="text-slate-400 hover:text-white transition-colors">✕</button>
+           <div className="bg-white w-full max-w-4xl h-[600px] rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 border flex flex-col md:flex-row" style={{ borderColor: `${EY_YELLOW}4D` }}>
+              {/* AI CHAT SIDEBAR FOR SQL */}
+              <div className="w-full md:w-1/3 bg-slate-50 border-r border-slate-200 flex flex-col">
+                <div className="p-4 bg-slate-100 border-b border-slate-200 flex items-center gap-2">
+                  <Bot size={18} className="text-[#2E2E38]"/>
+                  <span className="text-[10px] font-bold uppercase tracking-widest">AI SQL Helper</span>
+                </div>
+                <div className="flex-1 p-4 overflow-y-auto space-y-4">
+                  <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+                    <p className="text-[11px] text-slate-600 font-medium">Explain what you want to calculate, and I'll generate the SQL for you.</p>
+                  </div>
+                  {aiSqlPrompt && (
+                    <div className="bg-[#2E2E38] p-3 rounded-lg text-white text-[11px] self-end">
+                      {aiSqlPrompt}
+                    </div>
+                  )}
+                </div>
+                <div className="p-3 border-t border-slate-200 space-y-2">
+                  <textarea 
+                    value={aiSqlPrompt}
+                    onChange={e => setAiSqlPrompt(e.target.value)}
+                    placeholder="e.g., Sum of amount where currency is USD"
+                    className="w-full p-2 text-xs bg-white border border-slate-200 rounded focus:ring-1 focus:ring-[#FFE600] outline-none h-20 resize-none"
+                  />
+                  <button 
+                    onClick={handleAiSqlGen}
+                    disabled={isAiGenerating}
+                    className="w-full py-2 bg-[#2E2E38] text-white rounded text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-black transition-all disabled:opacity-50"
+                  >
+                    {isAiGenerating ? <RefreshCw size={14} className="animate-spin"/> : <Sparkles size={14} style={{ color: EY_YELLOW }}/>}
+                    Generate SQL Logic
+                  </button>
+                </div>
               </div>
-              <div className="p-6 space-y-4">
-                 <div className="space-y-1">
+
+              {/* MAIN SQL EDITOR */}
+              <div className="flex-1 flex flex-col">
+                <div className="bg-[#2E2E38] p-5 text-white flex justify-between items-center border-b border-[#FFE600]/30">
+                  <h3 className="font-bold text-sm flex items-center gap-2 italic uppercase tracking-tighter">
+                    <Code2 style={{ color: EY_YELLOW }}/> Metric Logic Editor
+                  </h3>
+                  <button onClick={() => setShowSqlModal(false)} className="text-slate-400 hover:text-white transition-colors">✕</button>
+                </div>
+                <div className="p-6 space-y-4 flex-1">
+                  <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Metric Alias</label>
                     <input 
                       type="text" 
@@ -898,26 +1108,26 @@ const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCan
                       placeholder="e.g., Total_Net_Exposure"
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-[#FFE600] outline-none font-bold text-[#2E2E38] tracking-tight transition-all"
                     />
-                 </div>
+                  </div>
 
-                 <div className="space-y-1">
+                  <div className="space-y-1 flex-1 flex flex-col">
                     <label className="text-[10px] font-bold text-slate-400 uppercase flex justify-between items-center tracking-widest">
-                      SQL Logic
+                      SQL Statement
                       <span className="text-[9px] lowercase italic font-normal text-slate-300 bg-[#2E2E38] px-1.5 py-0.5 rounded">Syntax: {'{{SAP_FIELD}}'}</span>
                     </label>
-                    <div className="relative font-mono group">
+                    <div className="relative font-mono group flex-1">
                       <div className="absolute top-2 right-2 text-[9px] uppercase" style={{ color: `${EY_YELLOW}4D` }}>Production View</div>
                       <textarea 
-                        rows={6}
+                        rows={12}
                         value={newSqlMetric.sql}
                         onChange={e => setNewSqlMetric({...newSqlMetric, sql: e.target.value})}
-                        className="w-full p-4 bg-[#2E2E38] rounded-lg border-2 border-slate-800 focus:border-[#FFE600] outline-none text-[13px] leading-relaxed resize-none shadow-inner"
+                        className="w-full h-full p-4 bg-[#2E2E38] rounded-lg border-2 border-slate-800 focus:border-[#FFE600] outline-none text-[13px] leading-relaxed resize-none shadow-inner"
                         style={{ color: EY_YELLOW }}
                       />
                     </div>
-                 </div>
+                  </div>
 
-                 <div className="flex gap-3 justify-end pt-2">
+                  <div className="flex gap-3 justify-end pt-2">
                     <button onClick={() => setShowSqlModal(false)} className="px-6 py-2 text-slate-500 font-bold text-sm hover:underline tracking-tight">Discard</button>
                     <button 
                       onClick={addSqlMetric}
@@ -927,7 +1137,8 @@ const ReportBuilder = ({ report, setReport, allRecipients, onAddRecipient, onCan
                     >
                       Commit Logic
                     </button>
-                 </div>
+                  </div>
+                </div>
               </div>
            </div>
         </div>

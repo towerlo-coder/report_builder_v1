@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   ShieldCheck, 
   TrendingUp, 
@@ -6,17 +6,12 @@ import {
   Database, 
   Zap, 
   Search, 
-  FileText, 
   BrainCircuit, 
   ChevronRight, 
   ChevronLeft,
   Activity,
   AlertCircle,
   CheckCircle2,
-  Users,
-  ArrowDown,
-  ArrowUp,
-  RefreshCcw,
   Newspaper,
   ShoppingCart,
   Info,
@@ -25,35 +20,54 @@ import {
   Lock,
   BarChart3,
   TrendingUp as TrendingIcon,
-  MousePointer2,
-  Clock,
   Rocket,
   Layers,
-  Network,
-  Split,
-  Eye,
-  Settings2
+  Network
 } from 'lucide-react';
 
-const App = () => {
-  const [currentView, setCurrentView] = useState('dashboard'); // 默认显示控制中心
-  const [simulationStatus, setSimulationStatus] = useState('idle');
-  const [currentStep, setCurrentStep] = useState(0);
-  const [inspectedAgent, setInspectedAgent] = useState(null);
+// --- Interfaces for TypeScript Clarity ---
+interface Tool {
+  name: string;
+  desc: string;
+}
 
-  // EY 品牌配色
-  const eyYellow = "#FFE600";
-  const eyBlack = "#000000";
-  const eyGrey = "#2E2E2E";
+interface Agent {
+  id: string;
+  title: string;
+  icon: any;
+  level: number;
+  role: string;
+  tools: Tool[];
+}
 
-  const agentDatabase = {
+interface SimStep {
+  title: string;
+  desc: string;
+  agents: string[];
+  sources: string[];
+  phase: 'command' | 'harvest' | 'synthesis' | 'complete';
+}
+
+interface DataSource {
+  id: string;
+  name: string;
+  icon: any;
+}
+
+const App: React.FC = () => {
+  const [currentView, setCurrentView] = useState<string>('dashboard');
+  const [simulationStatus, setSimulationStatus] = useState<'idle' | 'running' | 'complete'>('idle');
+  const [currentStep, setCurrentStep] = useState<number>(0);
+  const [inspectedAgent, setInspectedAgent] = useState<Agent | null>(null);
+
+  const agentDatabase: { L1: Agent[]; L2: Agent[]; L3: Agent[] } = {
     L1: [
       { 
         id: 'L1-CONTROLLER', 
         title: '中国区财务总监', 
         icon: BrainCircuit, 
         level: 1, 
-        role: '首席战略协调者。负责解析高层业务目标，制定整体执行策略，并批准最终的战略建议。', 
+        role: '首席战略决策者。负责解析高层业务目标，制定整体财务策略，并对最终建议进行最终审批。', 
         tools: [
           { name: '战略推理引擎', desc: '基于组织财务历史微调的大语言模型，用于分解复杂的业务指令。' },
           { name: '多智能体通信协议', desc: '专有握手系统，确保专业智能体之间安全的数据传输。' },
@@ -62,69 +76,29 @@ const App = () => {
       }
     ],
     L2: [
-      { 
-        id: 'L2-FPA', 
-        title: 'FP&A 部门主管', 
-        icon: TrendingUp, 
-        level: 2, 
-        role: '财务分析负责人。专注于业绩差异诊断、预算宏观控制和全年度预测性场景规划。', 
-        tools: [
-          { name: 'Python 分析沙盒', desc: '用于在差异驱动因素上运行复杂统计回归的安安全环境。' },
-          { name: 'SAP 数据桥接器', desc: '将多实例 ERP 数据聚合到统一预测模型中的中间件。' }
-        ] 
-      },
-      { 
-        id: 'L2-MA', 
-        title: '市场准入负责人', 
-        icon: Map, 
-        level: 2, 
-        role: '政策战略负责人。负责解读国家医保目录（NRDL）和集中带量采购（VBP）对利润率的长远影响。', 
-        tools: [
-          { name: '政策知识库 (RAG)', desc: '涵盖所有地区和国家级招标文件的实时数据库。' },
-          { name: '招标预测器', desc: 'AI 模型，根据竞品动态预测未来的招标价格走势。' }
-        ] 
-      },
-      { 
-        id: 'L2-COMP', 
-        title: '合规与风险主管', 
-        icon: ShieldCheck, 
-        level: 2, 
-        role: '合规准则负责人。确保财务流程符合全球治理标准以及当地的税务及反腐败法规。', 
-        tools: [
-          { name: '税务验证器', desc: '与税务管理系统直接集成，进行实时发票合规检查。' },
-          { name: '审计日志链', desc: '记录所有智能体操作的不可篡改日志，确保满足内控要求。' }
-        ] 
-      },
-      { 
-        id: 'L2-COMM', 
-        title: '卓越商业化负责人', 
-        icon: ShoppingCart, 
-        level: 2, 
-        role: '商业效率负责人。统筹销售代表资源，通过关联销售活动与医院采购量来优化资源配置。', 
-        tools: [
-          { name: 'CRM 分析 API', desc: '获取医院列名状态和医疗专业人员互动指标的接口。' },
-          { name: '代表活动评分器', desc: '通过机器学习识别代表拜访效率的最佳实践路径。' }
-        ] 
-      }
+      { id: 'L2-FPA', title: 'FP&A 部门主管', icon: TrendingUp, level: 2, role: '财务分析与规划负责人。专注于业绩差异诊断、预算宏观控制和跨部门预测性场景规划。', tools: [{ name: 'Python 分析沙盒', desc: '用于在差异驱动因素上运行复杂统计回归的安安全环境。' }, { name: 'SAP 数据桥接器', desc: '将多实例 ERP 数据聚合到统一预测模型中的中间件。' }] },
+      { id: 'L2-MA', title: '市场准入负责人', icon: Map, level: 2, role: '政策与准入战略负责人。负责解读招标政策（VBP）和医保目录（NRDL）变化对业务的长期影响。', tools: [{ name: '政策知识库 (RAG)', desc: '涵盖所有地区和国家级招标文件的实时数据库。' }, { name: '招标预测器', desc: 'AI 模型，根据竞品动态预测未来的招标价格走势。' }] },
+      { id: 'L2-COMP', title: '合规与风险主管', icon: ShieldCheck, level: 2, role: '合规准则总负责人。确保财务流程符合全球治理标准以及当地的税务及反腐败法规任务。', tools: [{ name: '税务验证器', desc: '实时发票合规检查。' }, { name: '审计日志链', desc: '记录所有智能体操作的不可篡改日志。' }] },
+      { id: 'L2-COMM', title: '商业卓越负责人', icon: ShoppingCart, level: 2, role: '商业效率负责人。统筹销售资源配置，通过关联销售代表活动与实际采购量来优化资源投入。', tools: [{ name: 'CRM 分析 API', desc: '获取医院互动指标。' }, { name: '代表活动评分器', desc: '识别最佳实践路径。' }] }
     ],
     L3: [
-      { id: 'L3-ERP', title: 'ERP 数据专家', icon: Database, level: 3, role: '数据抓取专家。直接从 SAP 模块中提取细颗粒度的交易数据和实际成本。', tools: [{ name: 'OData 连接器', desc: '用于从现代化 ERP 系统安全提取数据的标准 API。' }] },
-      { id: 'L3-GPO', title: 'GPO 价格监测专员', icon: Search, level: 3, role: '招标数据专家。负责实时爬取各省采购平台的价格变动，并转化为结构化报告。', tools: [{ name: 'OCR 解析器', desc: '将非结构化 PDF 招标通知转换为定价数据。' }] },
-      { id: 'L3-TAX', title: '发票验证专员', icon: ShieldCheck, level: 3, role: '税务操作专家。批量校验数字发票的真实性，确保税务抵扣申报的准确性。', tools: [{ name: 'GT-API 链路', desc: '对接国家税务平台的数字认证接口。' }] },
-      { id: 'L3-CRM', title: '代表活动分析员', icon: Activity, level: 3, role: 'CRM 专员。提取和归纳一线销售人员的学术互动频率及医院入组进度。', tools: [{ name: 'CRM 连接器', desc: '提取一线团队日志的安全 OAuth2 接口。' }] },
-      { id: 'L3-NEWS', title: '政策舆情员', icon: Newspaper, level: 3, role: '舆情监测专家。扫描医药行业新闻及政府公告，捕捉潜在的政策转向预警。', tools: [{ name: 'NLP 抓取器', desc: '扫描新闻门户捕捉政策变化关键词。' }] }
+      { id: 'L3-ERP', title: 'ERP 数据专家', icon: Database, level: 3, role: '数据提取专家。直接从 SAP 模块中抓取原始交易数据和财务明细。', tools: [{ name: 'OData 连接器', desc: '安全提取数据的标准 API。' }] },
+      { id: 'L3-GPO', title: 'GPO 价格专家', icon: Search, level: 3, role: '招标数据专家。负责实时爬取各省采购平台的价格变动，并转化为结构化报告。', tools: [{ name: 'OCR 解析器', desc: '将 PDF 招标通知转换为定价数据。' }] },
+      { id: 'L3-TAX', title: '税务合规专员', icon: ShieldCheck, level: 3, role: '税务验证专家。校验数字发票的真实性，确保税务抵扣申报的合规性。', tools: [{ name: 'GT-API 链路', desc: '对接国家税务平台的数字认证接口。' }] },
+      { id: 'L3-CRM', title: 'CRM 洞察专员', icon: Activity, level: 3, role: 'CRM 专员。提取代表学术互动频率及医院入组进度。', tools: [{ name: 'CRM 连接器', desc: '安全 OAuth2 接口。' }] },
+      { id: 'L3-NEWS', title: '宏观政策分析员', icon: Newspaper, level: 3, role: '舆情监测专家。扫描医药行业新闻及政府公告，捕捉潜在的政策预警。', tools: [{ name: 'NLP 抓取器', desc: '扫描新闻门户捕捉政策变化。' }] }
     ]
   };
 
-  const dataSources = [
-    { id: 'S1', name: 'SAP 核心系统', icon: Database },
-    { id: 'S2', name: '省级采购平台', icon: Globe },
-    { id: 'S3', name: '税务合规系统', icon: Lock },
-    { id: 'S4', name: 'CRM 商业洞察', icon: Activity },
-    { id: 'S5', name: '行业资讯源', icon: Newspaper }
+  const dataSources: DataSource[] = [
+    { id: 'S1', name: 'SAP ERP', icon: Database },
+    { id: 'S2', name: '省级采购网', icon: Globe },
+    { id: 'S3', name: '金税系统', icon: Lock },
+    { id: 'S4', name: 'CRM 数据中心', icon: Activity },
+    { id: 'S5', name: '公开资讯', icon: Newspaper }
   ];
 
-  const simSteps = [
+  const simSteps: SimStep[] = [
     {
       title: "任务启动与分解",
       desc: "财务总监 (L1) 解析 CFO 指令，识别核心业务实体和治疗领域优先级，构建专门的执行路线图。",
@@ -134,27 +108,27 @@ const App = () => {
     },
     {
       title: "工作人员部署",
-      desc: "部门主管 (L2) 授权专项专家 (L3)，向相关的内部和外部数据库提供安全的临时访问令牌。",
+      desc: "部门主管 (L2) 授权下属专项专家 (L3)，向相关的内部和外部数据库提供安全的临时访问令牌。",
       agents: ['L2-FPA', 'L2-MA', 'L2-COMP', 'L3-ERP', 'L3-GPO', 'L3-TAX', 'L3-NEWS'],
       sources: [],
       phase: 'command'
     },
     {
       title: "多模态数据采集",
-      desc: "专项专家跨系统执行并行提取，将非结构化 PDF 和交易日志转换为归一化数据模型。 ",
+      desc: "专项专家跨系统执行并行提取，将非结构化 PDF 和交易日志转换为归一化数据模型。",
       agents: ['L3-ERP', 'L3-GPO', 'L3-TAX', 'L3-CRM', 'L3-NEWS'],
       sources: ['S1', 'S2', 'S3', 'S4', 'S5'],
       phase: 'harvest'
     },
     {
-      title: "协作推理",
+      title: "部门协同推理",
       desc: "部门主管验证数据。FP&A 经理将销售额差异与市场准入负责人发现的价格政策变动直接关联。",
       agents: ['L2-FPA', 'L2-MA', 'L2-COMM', 'L3-ERP', 'L3-GPO'],
       sources: [],
       phase: 'synthesis'
     },
     {
-      title: "战略合成",
+      title: "战略合成决策",
       desc: "财务总监统筹各部门主管建议，平衡损益保护与资源投入，形成最终的战略决策草案。",
       agents: ['L1-CONTROLLER', 'L2-FPA', 'L2-MA', 'L2-COMM'],
       sources: [],
@@ -162,7 +136,7 @@ const App = () => {
     },
     {
       title: "执行报告生成",
-      desc: "协调者生成最终的诊断报告，包括透明的审计日志和可立即执行的预算调整方案。",
+      desc: "协调者生成最终的诊断报告，包括透明的审计日志和可立即执行的预算调整建议。",
       agents: ['L1-CONTROLLER'],
       sources: [],
       phase: 'complete'
@@ -183,30 +157,33 @@ const App = () => {
     setCurrentStep(0);
   };
 
-  const ResetSim = () => {
-    setSimulationStatus('idle');
-    setCurrentStep(0);
-    setCurrentView('dashboard');
-  };
+  interface AgentNodeProps {
+    id: string;
+    title: string;
+    icon: any;
+    level: number;
+    activeAgents: string[];
+    isSource?: boolean;
+  }
 
-  const AgentNode = ({ id, title, icon: Icon, level, activeAgents, isSource }) => {
+  const AgentNode: React.FC<AgentNodeProps> = ({ id, title, icon: Icon, level, activeAgents, isSource = false }) => {
     const isActive = isSource ? simSteps[currentStep].sources.includes(id) : activeAgents.includes(id);
     const borderColor = isActive ? 'border-black' : 'border-slate-200';
     
     return (
       <div className={`flex flex-col items-center transition-all duration-500 z-10 ${isActive ? 'scale-110 opacity-100' : 'scale-90 opacity-20'}`}>
         <div className={`rounded-xl border-2 bg-white flex items-center justify-center relative shadow-sm transition-all
-          ${level === 1 ? 'w-16 h-16 border-[3px]' : 'w-12 h-12'}
-          ${isActive ? (level === 1 ? 'shadow-xl bg-[#FFE600]/10 border-black' : 'shadow-lg bg-[#FFE600]/5 border-black') : ''} 
+          ${level === 1 ? 'w-20 h-20 border-[4px]' : level === 2 ? 'w-14 h-14 border-[3px]' : 'w-12 h-12'}
+          ${isActive ? (level === 1 ? 'shadow-2xl bg-[#FFE600]/20 border-black' : 'shadow-lg bg-[#FFE600]/10 border-black') : ''} 
           ${borderColor} ${isSource ? 'bg-slate-50 border-dashed' : ''}`}>
-          <Icon size={level === 1 ? 28 : 20} className={isActive ? 'text-black' : 'text-slate-400'} />
+          <Icon size={level === 1 ? 32 : level === 2 ? 24 : 20} className={isActive ? 'text-black' : 'text-slate-400'} />
           {isActive && !isSource && (
-            <div className={`absolute -bottom-1 -right-1 rounded-full border-2 border-white animate-pulse bg-black ${level === 1 ? 'w-4 h-4' : 'w-3 h-3'}`}></div>
+            <div className={`absolute -bottom-1 -right-1 rounded-full border-2 border-white animate-pulse bg-black ${level === 1 ? 'w-5 h-5' : 'w-3.5 h-3.5'}`}></div>
           )}
         </div>
         <p className={`mt-2 font-bold uppercase tracking-tight text-center leading-tight transition-colors
-          ${level === 1 ? 'text-[9px] w-24' : 'text-[7px] w-16'}
-          ${isActive ? 'text-black' : 'text-slate-400'}`}>
+          ${level === 1 ? 'text-[10px] w-28' : level === 2 ? 'text-[8px] w-20' : 'text-[7px] w-16'}
+          ${isActive ? 'text-black font-black' : 'text-slate-400'}`}>
           {title}
         </p>
       </div>
@@ -218,12 +195,11 @@ const App = () => {
       <style>{`
         @keyframes dash { to { stroke-dashoffset: -20; } }
         .pulsing-line { stroke-dasharray: 4 6; animation: dash 1s linear infinite; }
-        .glow-line { filter: drop-shadow(0 0 6px rgba(255, 230, 0, 0.9)); }
+        .glow-line { filter: drop-shadow(0 0 8px rgba(255, 230, 0, 1)); }
         @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .animate-spin-slow { animation: spin-slow 8s linear infinite; }
       `}</style>
 
-      {/* 页眉 */}
       <header className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center z-50 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-[#FFE600] rounded-sm flex items-center justify-center text-black shadow-sm">
@@ -231,7 +207,7 @@ const App = () => {
           </div>
           <div>
             <h1 className="text-xl font-bold tracking-tighter uppercase text-black">Agentic AI</h1>
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest text-center">数字财务解决方案</p>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest text-center">交互式演示工具</p>
           </div>
         </div>
         
@@ -259,10 +235,8 @@ const App = () => {
 
       <main className="flex-1 p-6 max-w-7xl mx-auto w-full overflow-y-auto">
         
-        {/* 视图：控制中心 */}
         {currentView === 'dashboard' && (
           <div className="space-y-6 animate-in fade-in duration-500">
-            {/* EY 风格战略页眉 */}
             <div className="bg-black rounded-sm p-12 text-white shadow-2xl mb-8 relative overflow-hidden border-l-[12px] border-[#FFE600]">
               <div className="absolute right-0 top-0 opacity-10 -mr-16 -mt-16">
                 <Rocket size={320} />
@@ -280,15 +254,15 @@ const App = () => {
                       <h3 className="font-bold uppercase tracking-[0.2em] text-sm">核心价值主张</h3>
                    </div>
                    <div className="space-y-6">
-                      <p className="text-sm text-slate-300 leading-relaxed">Agentic AI 是指具备推理和执行能力的自主系统，它不仅仅是回答问题，更是主动解决问题。</p>
+                      <p className="text-sm text-slate-300 leading-relaxed">Agentic AI 是指具备推理和执行能力的自主系统，旨在主动解决问题。</p>
                       <ul className="grid grid-cols-1 gap-4">
                          <li className="flex gap-4 text-xs items-center group">
                             <div className="w-2 h-2 bg-[#FFE600] group-hover:scale-125 transition-transform"></div>
-                            <span className="text-slate-200"><strong>释放精力：</strong> 将 80% 的手工数据清洗转交给智能体处理。</span>
+                            <span className="text-slate-200"><strong>释放精力：</strong> 将 80% 的手工数据清洗转交给智能体。</span>
                          </li>
                          <li className="flex gap-4 text-xs items-center group">
                             <div className="w-2 h-2 bg-[#FFE600] group-hover:scale-125 transition-transform"></div>
-                            <span className="text-slate-200"><strong>深度诊断：</strong> 通过跨系统的秒级联动发现数字背后的根因。</span>
+                            <span className="text-slate-200"><strong>深度诊断：</strong> 通过跨系统的秒级联动发现数字背后根因。</span>
                          </li>
                          <li className="flex gap-4 text-xs items-center group">
                             <div className="w-2 h-2 bg-[#FFE600] group-hover:scale-125 transition-transform"></div>
@@ -326,59 +300,55 @@ const App = () => {
                 <div className="flex flex-col lg:flex-row gap-12 mt-12 animate-in slide-in-from-bottom-6 duration-700">
                   <div className="flex-1 bg-slate-50 rounded-sm p-12 relative flex flex-col items-center justify-between min-h-[650px] border border-slate-100 shadow-inner">
                     
-                    {/* L1: 战略决策层 */}
-                    <div className="w-full flex flex-col items-center">
-                       <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">战略决策层 (财务总监)</div>
+                    <div className="w-full flex flex-col items-center mb-10">
+                       <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-4 bg-white px-4 py-1 rounded-full border border-slate-200 shadow-sm">
+                          战略决策层 (财务总监)
+                       </div>
                        <AgentNode id="L1-CONTROLLER" title="财务总监" icon={BrainCircuit} level={1} activeAgents={simSteps[currentStep].agents} />
                     </div>
 
-                    {/* L2: 业务管理层 */}
-                    <div className="w-full flex flex-col items-center">
-                       <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">业务管理层 (部门主管)</div>
-                       <div className="w-full flex justify-around px-2">
+                    <div className="w-full flex flex-col items-center mb-10">
+                       <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-4 bg-white px-4 py-1 rounded-full border border-slate-200 shadow-sm">
+                          业务管理层 (部门主管)
+                       </div>
+                       <div className="w-full flex justify-around px-8">
                          {agentDatabase.L2.map(a => <AgentNode key={a.id} id={a.id} title={a.title.split(' ')[0]} icon={a.icon} level={2} activeAgents={simSteps[currentStep].agents} />)}
                        </div>
                     </div>
 
-                    {/* L3: 任务执行层 */}
-                    <div className="w-full flex flex-col items-center">
-                       <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">任务执行层 (专项专家)</div>
-                       <div className="w-full flex justify-between px-0">
+                    <div className="w-full flex flex-col items-center mb-10">
+                       <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-4 bg-white px-4 py-1 rounded-full border border-slate-200 shadow-sm">
+                          任务执行层 (专项专家)
+                       </div>
+                       <div className="w-full flex justify-between px-4">
                          {agentDatabase.L3.map(a => <AgentNode key={a.id} id={a.id} title={a.title.split(' ')[0]} icon={a.icon} level={3} activeAgents={simSteps[currentStep].agents} />)}
                        </div>
                     </div>
 
-                    {/* L4: 数据源层 */}
-                    <div className="w-full pt-12 border-t-2 border-slate-200 border-dashed flex justify-around items-end">
-                      {dataSources.map(s => <AgentNode key={s.id} id={s.id} title={s.name.split(' ')[0]} icon={s.icon} isSource activeAgents={[]} />)}
+                    <div className="w-full pt-10 border-t-2 border-slate-200 border-dashed flex justify-around items-end">
+                      {dataSources.map(s => <AgentNode key={s.id} id={s.id} title={s.name.split(' ')[0]} icon={s.icon} level={4} activeAgents={[]} isSource />)}
                     </div>
 
-                    {/* SVG PATHS - 精准对齐 */}
-                    <svg className="absolute inset-0 w-full h-full pointer-events-none z-0" style={{ minHeight: '650px' }}>
-                      {/* L1 -> L2 */}
+                    <svg className="absolute inset-0 w-full h-full pointer-events-none z-0" viewBox="0 0 800 650" preserveAspectRatio="none">
                       {[0, 1, 2, 3].map(i => {
                         const isActive = simSteps[currentStep].phase === 'command' && simSteps[currentStep].agents.some(a => a.startsWith('L2'));
-                        const xOffset = 12.5 + (i * 25);
-                        return <path key={`l1l2-${i}`} d={`M 50%,115 C 50%,160 ${xOffset}%,160 ${xOffset}%,235`} stroke={isActive ? "#FFE600" : "#e2e8f0"} strokeWidth={isActive ? 4 : 1} fill="none" className={isActive ? 'pulsing-line glow-line' : ''} />;
+                        const xOffset = 100 + (i * 200);
+                        return <path key={`l1l2-${i}`} d={`M 400,105 C 400,160 ${xOffset},160 ${xOffset},210`} stroke={isActive ? "#FFE600" : "#e2e8f0"} strokeWidth={isActive ? 4 : 1} fill="none" className={isActive ? 'pulsing-line glow-line' : ''} />;
                       })}
-                      {/* L2 -> L3 */}
                       {[0, 1, 2, 3, 4].map(i => {
                         const isActive = simSteps[currentStep].agents.some(a => a.startsWith('L3'));
-                        const startX = 12.5 + (Math.floor(i * 0.8) * 25);
-                        const endX = (i * 25);
-                        return <path key={`l2l3-${i}`} d={`M ${startX}%,290 C ${startX}%,340 ${endX}%,340 ${endX}%,410`} stroke={isActive ? "#000000" : "#e2e8f0"} strokeWidth={isActive ? 2 : 1} fill="none" className={isActive ? 'pulsing-line' : ''} />;
+                        const startX = 100 + (Math.min(i, 3) * 200); 
+                        const endX = 80 + (i * 160);
+                        return <path key={`l2l3-${i}`} d={`M ${startX},275 C ${startX},330 ${endX},330 ${endX},375`} stroke={isActive ? "#000000" : "#e2e8f0"} strokeWidth={isActive ? 2 : 1} fill="none" className={isActive ? 'pulsing-line' : ''} />;
                       })}
-                      {/* L3 -> L4 */}
                       {[0, 1, 2, 3, 4].map(i => {
                         const isActive = simSteps[currentStep].phase === 'harvest' && simSteps[currentStep].sources.length > 0;
-                        const x = (i * 25);
-                        const sourceX = 10 + (i * 20);
-                        return <path key={`l3l4-${i}`} d={`M ${x}%,465 C ${x}%,510 ${sourceX}%,510 ${sourceX}%,555`} stroke={isActive ? "#000000" : "#e2e8f0"} strokeWidth={2} fill="none" className={isActive ? 'pulsing-line' : ''} />;
+                        const x = 80 + (i * 160);
+                        return <path key={`l3l4-${i}`} d={`M ${x},440 L ${x},535`} stroke={isActive ? "#000000" : "#e2e8f0"} strokeWidth={2} fill="none" className={isActive ? 'pulsing-line' : ''} />;
                       })}
                     </svg>
                   </div>
 
-                  {/* Step Control Panel */}
                   <div className="w-full lg:w-80 flex flex-col gap-4">
                     <div className="bg-black text-white rounded-sm p-8 flex-1 shadow-xl flex flex-col border-t-4 border-[#FFE600]">
                       <div className="flex items-center gap-2 text-[#FFE600] mb-4 uppercase tracking-[0.2em] text-[10px] font-black">
@@ -400,7 +370,6 @@ const App = () => {
           </div>
         )}
 
-        {/* 视图：认识智能体 */}
         {currentView === 'agents' && (
           <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
             <div className="text-center mb-10">
@@ -455,7 +424,7 @@ const App = () => {
                       <div>
                         <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-6 flex items-center gap-3"><Code size={16}/> 核心工具与 API 集成</h4>
                         <div className="grid grid-cols-1 gap-6">
-                          {inspectedAgent.tools.map((tool, i) => (
+                          {inspectedAgent.tools.map((tool: Tool, i: number) => (
                             <div key={i} className="p-6 bg-black text-white rounded-sm border-l-8 border-[#FFE600] group hover:bg-[#111] transition-colors">
                               <div className="flex justify-between items-center mb-3">
                                 <span className="text-sm font-black text-[#FFE600] font-mono uppercase tracking-[0.2em]">{tool.name}</span>
@@ -474,7 +443,6 @@ const App = () => {
           </div>
         )}
 
-        {/* 视图：为什么选择多智能体？ */}
         {currentView === 'multi-agent' && (
           <div className="space-y-8 animate-in fade-in duration-500">
              <div className="text-center max-w-2xl mx-auto">
@@ -528,7 +496,7 @@ const App = () => {
                       <li className="flex gap-4 items-start">
                          <div className="mt-1.5 w-2 h-2 bg-[#FFE600] shrink-0"></div>
                          <div>
-                            <p className="text-sm font-bold uppercase tracking-tight">精准专业化</p>
+                            <p className="text-sm font-bold uppercase tracking-tight">精密专业化</p>
                             <p className="text-xs text-slate-400 leading-relaxed mt-1">领域智能体在隔离的窗口中运行，确保特定任务在数学计算和政策解读上的高度准确性。</p>
                          </div>
                       </li>
@@ -552,7 +520,6 @@ const App = () => {
           </div>
         )}
 
-        {/* 视图：分析报告 */}
         {currentView === 'report' && (
           <div className="space-y-12 animate-in zoom-in-95 duration-500 pb-12">
             <div className="bg-black text-white rounded-sm p-16 relative overflow-hidden shadow-2xl border-l-[16px] border-[#FFE600]">
@@ -659,7 +626,6 @@ const App = () => {
                </div>
             </div>
 
-            {/* 建议行动部分 */}
             <div className="bg-black rounded-sm p-16 text-white relative overflow-hidden shadow-2xl border-l-[16px] border-[#FFE600]">
               <div className="absolute bottom-0 right-0 p-8 opacity-5"><ShieldCheck size={300} /></div>
               <div className="flex items-center gap-4 mb-12 text-[#FFE600] font-black uppercase text-sm tracking-[0.6em]"><Rocket size={24}/> 4. 建议行动清单 (Recommended Actions)</div>
@@ -695,9 +661,9 @@ const App = () => {
          <div className="flex gap-6">
            <span>节点：14个活跃中</span>
            <span>安全等级：RSA-4096 / GXP</span>
-           <span>审计：不可篡改记录</span>
+           <span>审计：记录不可篡改</span>
          </div>
-         <p>© 2026 全球财务运营 • 智能体劳动力原型 v3.5</p>
+         <p>© 2026 全球财务运营 • 智能体劳动力原型 v3.6</p>
       </footer>
     </div>
   );

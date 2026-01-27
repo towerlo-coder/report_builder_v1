@@ -303,7 +303,7 @@ const App = () => {
     setInvoiceLines(invoiceLines.filter(line => line.id !== id));
   };
 
-  const handleUpdateLine = (id: string, field: keyof LineItem, value: string | number) => {
+  const handleUpdateLine = (id: string, field: keyof LineItem, value: any) => {
     setInvoiceLines(invoiceLines.map(line => 
       line.id === id ? { ...line, [field]: value } : line
     ));
@@ -787,7 +787,7 @@ const App = () => {
                       <div className="pt-2 border-t border-slate-100">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Audit Memo / Property Note</label>
                         <textarea 
-                          rows="2" 
+                          rows={2} 
                           placeholder="Add site-specific notes..." 
                           value={li.memo}
                           onChange={(e) => handleUpdateLine(li.id, 'memo', e.target.value)}

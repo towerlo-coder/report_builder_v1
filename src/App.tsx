@@ -1,670 +1,894 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
-  ShieldCheck, 
-  TrendingUp, 
-  Map, 
-  Database, 
-  Zap, 
+  LayoutDashboard, 
+  FileText, 
+  Upload, 
+  CheckCircle2, 
+  AlertCircle, 
+  Clock, 
   Search, 
-  BrainCircuit, 
+  Plus, 
   ChevronRight, 
-  ChevronLeft,
-  Activity,
-  AlertCircle,
-  CheckCircle2,
-  Newspaper,
-  ShoppingCart,
-  Info,
-  Code,
-  Globe,
-  Lock,
+  ArrowLeft, 
+  Settings, 
+  LogOut,
+  Image as ImageIcon,
+  MoreVertical,
+  Download,
+  Trash2,
+  ExternalLink,
   BarChart3,
-  TrendingUp as TrendingIcon,
-  Rocket,
-  Layers,
-  Network
+  Smartphone,
+  Monitor,
+  Sparkles,
+  MessageSquare,
+  ChevronDown,
+  X,
+  Calculator,
+  User,
+  Database,
+  ShieldCheck,
+  TrendingUp,
+  Info,
+  PieChart,
+  Activity,
+  Calendar
 } from 'lucide-react';
 
-// --- Interfaces for TypeScript Clarity ---
-interface Tool {
-  name: string;
-  desc: string;
-}
+// Theme Colors
+const SINO_ORANGE = '#F47321';
 
-interface Agent {
-  id: string;
-  title: string;
-  icon: any;
-  level: number;
-  role: string;
-  tools: Tool[];
-}
+const MOCK_DATA = {
+  companies: [
+    { id: '1000', label: '1000 - Sino HK Property Management' },
+    { id: '2100', label: '2100 - Sino SG Development Pte Ltd' },
+    { id: '3000', label: '3000 - Sino Australia Hotel Group' }
+  ],
+  suppliers: [
+    'HK Electric Co.',
+    'OTIS Elevator Company HK',
+    'Sydney Water Corporation',
+    'Singtel Enterprise',
+    'Star Hotel Supplies SG',
+    'Melbourne Facility Services',
+    'Aussie Construction Partners',
+    'CLP Power Hong Kong'
+  ],
+  glAccounts: [
+    '610100 - Building Repairs & Maint', 
+    '620200 - Utilities: Electricity', 
+    '620300 - Utilities: Water & Sewage', 
+    '700500 - Hotel Guest Supplies',
+    '710200 - Security Services',
+    '800500 - Property Management Fees'
+  ],
+  costCenters: [
+    'HK_REDEV_TST - Tsim Sha Tsui Redevelopment', 
+    'SG_HOTEL_MARINA - Sino Marina Bay Hotel', 
+    'AUS_RES_MELB - Melbourne Residential Tower', 
+    'HK_CORP_HQ - Sino Plaza Headquarters'
+  ],
+  profitCenters: [
+    'PC_HK_COMM - HK Commercial',
+    'PC_HK_RES - HK Residential',
+    'PC_SG_HOSP - SG Hospitality',
+    'PC_AUS_HOSP - Australia Hospitality'
+  ],
+  currencies: ['HKD', 'SGD', 'AUD', 'USD', 'GBP']
+};
 
-interface SimStep {
-  title: string;
-  desc: string;
-  agents: string[];
-  sources: string[];
-  phase: 'command' | 'harvest' | 'synthesis' | 'complete';
-}
-
-interface DataSource {
-  id: string;
-  name: string;
-  icon: any;
-}
-
-const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<string>('dashboard');
-  const [simulationStatus, setSimulationStatus] = useState<'idle' | 'running' | 'complete'>('idle');
-  const [currentStep, setCurrentStep] = useState<number>(0);
-  const [inspectedAgent, setInspectedAgent] = useState<Agent | null>(null);
-
-  const agentDatabase: { L1: Agent[]; L2: Agent[]; L3: Agent[] } = {
-    L1: [
+const MOCK_INVOICES = [
+  {
+    id: 'INV-HK-9921',
+    vendor: 'OTIS Elevator Company HK',
+    date: '2024-01-15',
+    amount: '12,500.00',
+    status: 'Ready',
+    confidence: 98,
+    companyCode: '1000',
+    companyName: 'Sino HK Property Management',
+    uploadedBy: 'Ada Wong',
+    uploadMethod: 'Desktop',
+    fields: {
+      company: { val: '1000 - Sino HK Property Management', conf: 99 },
+      date: { val: '2024-01-15', conf: 98 },
+      currency: { val: 'HKD', conf: 100 },
+      supplier: { val: 'OTIS Elevator Company HK', conf: 97 }
+    },
+    lineItems: [
       { 
-        id: 'L1-CONTROLLER', 
-        title: '中国区财务总监', 
-        icon: BrainCircuit, 
-        level: 1, 
-        role: '首席战略决策者。负责解析高层业务目标，制定整体财务策略，并对最终建议进行最终审批。', 
-        tools: [
-          { name: '战略推理引擎', desc: '基于组织财务历史微调的大语言模型，用于分解复杂的业务指令。' },
-          { name: '多智能体通信协议', desc: '专有握手系统，确保专业智能体之间安全的数据传输。' },
-          { name: '执行叙述生成器', desc: '将原始数据转换为适用于C-suite高层的总结和战略建议。' }
-        ] 
+        id: 'li-1',
+        glCode: '610100 - Building Repairs & Maint', 
+        costCenter: 'HK_CORP_HQ - Sino Plaza Headquarters', 
+        profitCenter: 'PC_HK_COMM - HK Commercial', 
+        amount: '12,500.00', 
+        desc: 'Quarterly Lift Maintenance - Jan-Mar', 
+        itemText: 'Routine Elevator Service - High Rise Unit', 
+        memo: '', 
+        conf: 98,
+        aiCommentary: "Matched to Sino Plaza HQ based on facility contract ID identified in footer."
       }
-    ],
-    L2: [
-      { id: 'L2-FPA', title: 'FP&A 部门主管', icon: TrendingUp, level: 2, role: '财务分析与规划负责人。专注于业绩差异诊断、预算宏观控制和跨部门预测性场景规划。', tools: [{ name: 'Python 分析沙盒', desc: '用于在差异驱动因素上运行复杂统计回归的安安全环境。' }, { name: 'SAP 数据桥接器', desc: '将多实例 ERP 数据聚合到统一预测模型中的中间件。' }] },
-      { id: 'L2-MA', title: '市场准入负责人', icon: Map, level: 2, role: '政策与准入战略负责人。负责解读招标政策（VBP）和医保目录（NRDL）变化对业务的长期影响。', tools: [{ name: '政策知识库 (RAG)', desc: '涵盖所有地区和国家级招标文件的实时数据库。' }, { name: '招标预测器', desc: 'AI 模型，根据竞品动态预测未来的招标价格走势。' }] },
-      { id: 'L2-COMP', title: '合规与风险主管', icon: ShieldCheck, level: 2, role: '合规准则总负责人。确保财务流程符合全球治理标准以及当地的税务及反腐败法规任务。', tools: [{ name: '税务验证器', desc: '实时发票合规检查。' }, { name: '审计日志链', desc: '记录所有智能体操作的不可篡改日志。' }] },
-      { id: 'L2-COMM', title: '商业卓越负责人', icon: ShoppingCart, level: 2, role: '商业效率负责人。统筹销售资源配置，通过关联销售代表活动与实际采购量来优化资源投入。', tools: [{ name: 'CRM 分析 API', desc: '获取医院互动指标。' }, { name: '代表活动评分器', desc: '识别最佳实践路径。' }] }
-    ],
-    L3: [
-      { id: 'L3-ERP', title: 'ERP 数据专家', icon: Database, level: 3, role: '数据提取专家。直接从 SAP 模块中抓取原始交易数据和财务明细。', tools: [{ name: 'OData 连接器', desc: '安全提取数据的标准 API。' }] },
-      { id: 'L3-GPO', title: 'GPO 价格专家', icon: Search, level: 3, role: '招标数据专家。负责实时爬取各省采购平台的价格变动，并转化为结构化报告。', tools: [{ name: 'OCR 解析器', desc: '将 PDF 招标通知转换为定价数据。' }] },
-      { id: 'L3-TAX', title: '税务合规专员', icon: ShieldCheck, level: 3, role: '税务验证专家。校验数字发票的真实性，确保税务抵扣申报的合规性。', tools: [{ name: 'GT-API 链路', desc: '对接国家税务平台的数字认证接口。' }] },
-      { id: 'L3-CRM', title: 'CRM 洞察专员', icon: Activity, level: 3, role: 'CRM 专员。提取代表学术互动频率及医院入组进度。', tools: [{ name: 'CRM 连接器', desc: '安全 OAuth2 接口。' }] },
-      { id: 'L3-NEWS', title: '宏观政策分析员', icon: Newspaper, level: 3, role: '舆情监测专家。扫描医药行业新闻及政府公告，捕捉潜在的政策预警。', tools: [{ name: 'NLP 抓取器', desc: '扫描新闻门户捕捉政策变化。' }] }
     ]
-  };
-
-  const dataSources: DataSource[] = [
-    { id: 'S1', name: 'SAP ERP', icon: Database },
-    { id: 'S2', name: '省级采购网', icon: Globe },
-    { id: 'S3', name: '金税系统', icon: Lock },
-    { id: 'S4', name: 'CRM 数据中心', icon: Activity },
-    { id: 'S5', name: '公开资讯', icon: Newspaper }
-  ];
-
-  const simSteps: SimStep[] = [
-    {
-      title: "任务启动与分解",
-      desc: "财务总监 (L1) 解析 CFO 指令，识别核心业务实体和治疗领域优先级，构建专门的执行路线图。",
-      agents: ['L1-CONTROLLER', 'L2-FPA', 'L2-MA', 'L2-COMP'],
-      sources: [],
-      phase: 'command'
+  },
+  {
+    id: 'INV-SG-5502',
+    vendor: 'Star Hotel Supplies SG',
+    date: '2024-01-20',
+    amount: '4,210.50',
+    status: 'Needs Review',
+    confidence: 78,
+    companyCode: '2100',
+    companyName: 'Sino SG Development Pte Ltd',
+    uploadedBy: 'Kevin Lim',
+    uploadMethod: 'Mobile',
+    fields: {
+      company: { val: '2100 - Sino SG Development Pte Ltd', conf: 99 },
+      date: { val: '2024-01-20', conf: 92 },
+      currency: { val: 'SGD', conf: 100 },
+      supplier: { val: 'Star Hotel Supplies SG', conf: 85 }
     },
-    {
-      title: "工作人员部署",
-      desc: "部门主管 (L2) 授权下属专项专家 (L3)，向相关的内部和外部数据库提供安全的临时访问令牌。",
-      agents: ['L2-FPA', 'L2-MA', 'L2-COMP', 'L3-ERP', 'L3-GPO', 'L3-TAX', 'L3-NEWS'],
-      sources: [],
-      phase: 'command'
-    },
-    {
-      title: "多模态数据采集",
-      desc: "专项专家跨系统执行并行提取，将非结构化 PDF 和交易日志转换为归一化数据模型。",
-      agents: ['L3-ERP', 'L3-GPO', 'L3-TAX', 'L3-CRM', 'L3-NEWS'],
-      sources: ['S1', 'S2', 'S3', 'S4', 'S5'],
-      phase: 'harvest'
-    },
-    {
-      title: "部门协同推理",
-      desc: "部门主管验证数据。FP&A 经理将销售额差异与市场准入负责人发现的价格政策变动直接关联。",
-      agents: ['L2-FPA', 'L2-MA', 'L2-COMM', 'L3-ERP', 'L3-GPO'],
-      sources: [],
-      phase: 'synthesis'
-    },
-    {
-      title: "战略合成决策",
-      desc: "财务总监统筹各部门主管建议，平衡损益保护与资源投入，形成最终的战略决策草案。",
-      agents: ['L1-CONTROLLER', 'L2-FPA', 'L2-MA', 'L2-COMM'],
-      sources: [],
-      phase: 'synthesis'
-    },
-    {
-      title: "执行报告生成",
-      desc: "协调者生成最终的诊断报告，包括透明的审计日志和可立即执行的预算调整建议。",
-      agents: ['L1-CONTROLLER'],
-      sources: [],
-      phase: 'complete'
-    }
-  ];
-
-  const handleNext = () => {
-    if (currentStep < simSteps.length - 1) setCurrentStep(prev => prev + 1);
-    else setSimulationStatus('complete');
-  };
-
-  const handleBack = () => {
-    if (currentStep > 0) setCurrentStep(prev => prev - 1);
-  };
-
-  const startSim = () => {
-    setSimulationStatus('running');
-    setCurrentStep(0);
-  };
-
-  interface AgentNodeProps {
-    id: string;
-    title: string;
-    icon: any;
-    level: number;
-    activeAgents: string[];
-    isSource?: boolean;
+    lineItems: [
+      { 
+        id: 'li-2',
+        glCode: '700500 - Hotel Guest Supplies', 
+        costCenter: 'SG_HOTEL_MARINA - Sino Marina Bay Hotel', 
+        profitCenter: 'PC_SG_HOSP - SG Hospitality', 
+        amount: '4,210.50', 
+        desc: 'Premium Linen Set x 200', 
+        itemText: 'Guest Amenities - Bedding Upgrade', 
+        memo: 'Confirm bulk discount applied', 
+        conf: 76,
+        aiCommentary: "GL 700500 selected; confidence level impacted by handwritten surcharge note on page 2."
+      }
+    ]
   }
+];
 
-  const AgentNode: React.FC<AgentNodeProps> = ({ id, title, icon: Icon, level, activeAgents, isSource = false }) => {
-    const isActive = isSource ? simSteps[currentStep].sources.includes(id) : activeAgents.includes(id);
-    const borderColor = isActive ? 'border-black' : 'border-slate-200';
-    
-    return (
-      <div className={`flex flex-col items-center transition-all duration-500 z-10 ${isActive ? 'scale-110 opacity-100' : 'scale-90 opacity-20'}`}>
-        <div className={`rounded-xl border-2 bg-white flex items-center justify-center relative shadow-sm transition-all
-          ${level === 1 ? 'w-20 h-20 border-[4px]' : level === 2 ? 'w-14 h-14 border-[3px]' : 'w-12 h-12'}
-          ${isActive ? (level === 1 ? 'shadow-2xl bg-[#FFE600]/20 border-black' : 'shadow-lg bg-[#FFE600]/10 border-black') : ''} 
-          ${borderColor} ${isSource ? 'bg-slate-50 border-dashed' : ''}`}>
-          <Icon size={level === 1 ? 32 : level === 2 ? 24 : 20} className={isActive ? 'text-black' : 'text-slate-400'} />
-          {isActive && !isSource && (
-            <div className={`absolute -bottom-1 -right-1 rounded-full border-2 border-white animate-pulse bg-black ${level === 1 ? 'w-5 h-5' : 'w-3.5 h-3.5'}`}></div>
-          )}
-        </div>
-        <p className={`mt-2 font-bold uppercase tracking-tight text-center leading-tight transition-colors
-          ${level === 1 ? 'text-[10px] w-28' : level === 2 ? 'text-[8px] w-20' : 'text-[7px] w-16'}
-          ${isActive ? 'text-black font-black' : 'text-slate-400'}`}>
-          {title}
-        </p>
-      </div>
-    );
-  };
+const ConfidenceBadge = ({ score }) => {
+  if (score === undefined) return null;
+  const color = score >= 95 ? 'bg-green-500/10 text-green-600 border-green-200' : 
+                score >= 75 ? 'bg-amber-500/10 text-amber-600 border-amber-200' : 
+                'bg-red-500/10 text-red-600 border-red-200';
+  
+  return (
+    <div className={`px-1.5 py-0.5 rounded border text-[10px] font-black font-mono shadow-sm ${color}`}>
+      {score}%
+    </div>
+  );
+};
+
+const SearchableSelect = ({ label, value, options, onChange, confidence, placeholder = "Search...", onFocus, onBlur }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredOptions = useMemo(() => 
+    options.filter(opt => opt.toLowerCase().includes(searchTerm.toLowerCase())),
+    [options, searchTerm]
+  );
 
   return (
-    <div className="min-h-screen bg-[#F4F4F4] font-sans text-slate-900 flex flex-col overflow-hidden">
-      <style>{`
-        @keyframes dash { to { stroke-dashoffset: -20; } }
-        .pulsing-line { stroke-dasharray: 4 6; animation: dash 1s linear infinite; }
-        .glow-line { filter: drop-shadow(0 0 8px rgba(255, 230, 0, 1)); }
-        @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .animate-spin-slow { animation: spin-slow 8s linear infinite; }
-      `}</style>
+    <div className="space-y-1.5 relative">
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-bold text-slate-600 tracking-tight">{label}</label>
+        <ConfidenceBadge score={confidence} />
+      </div>
+      <div 
+        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-sm font-medium cursor-pointer flex justify-between items-center hover:border-slate-300 transition-colors"
+        onClick={() => setIsOpen(!isOpen)}
+        tabIndex={0}
+      >
+        <span className="truncate">{value || placeholder}</span>
+        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </div>
 
-      <header className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center z-50 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#FFE600] rounded-sm flex items-center justify-center text-black shadow-sm">
-            <BrainCircuit size={24} />
+      {isOpen && (
+        <div className="absolute z-50 top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden">
+          <div className="p-2 border-b border-slate-100 bg-slate-50">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+              <input 
+                autoFocus
+                type="text" 
+                placeholder="Search..." 
+                className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:ring-1 focus:ring-[#F47321] focus:border-[#F47321]"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-bold tracking-tighter uppercase text-black">Agentic AI</h1>
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest text-center">交互式演示工具</p>
+          <div className="max-h-48 overflow-y-auto py-1">
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((opt, i) => (
+                <div 
+                  key={i}
+                  className="px-3 py-2 text-sm hover:bg-[#F47321]/10 hover:text-[#F47321] cursor-pointer transition-colors"
+                  onClick={() => {
+                    onChange(opt);
+                    setIsOpen(false);
+                    setSearchTerm("");
+                  }}
+                >
+                  {opt}
+                </div>
+              ))
+            ) : (
+              <div className="px-3 py-4 text-xs text-slate-400 text-center italic">No results found</div>
+            )}
           </div>
         </div>
-        
-        <nav className="flex gap-1 bg-slate-100 p-1 rounded-sm">
-          {[
-            { id: 'dashboard', label: '控制中心' },
-            { id: 'agents', label: '认识智能体' },
-            { id: 'multi-agent', label: '为什么选择多智能体？' },
-            { id: 'report', label: '分析报告' }
-          ].map(view => (
-            <button 
-              key={view.id}
-              onClick={() => {
-                setCurrentView(view.id);
-                if (view.id === 'agents' && !inspectedAgent) setInspectedAgent(agentDatabase.L1[0]);
-              }} 
-              disabled={view.id === 'report' && simulationStatus !== 'complete'}
-              className={`px-4 py-2 rounded-sm text-[10px] font-bold transition-all uppercase tracking-tighter ${currentView === view.id ? 'bg-black text-[#FFE600]' : 'text-slate-500 hover:text-black disabled:opacity-20'}`}
-            >
-              {view.label}
-            </button>
-          ))}
-        </nav>
+      )}
+    </div>
+  );
+};
+
+const App = () => {
+  const [activeTab, setActiveTab] = useState('Dashboard');
+  const [view, setView] = useState('list');
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isAiOpen, setIsAiOpen] = useState(false);
+  const [approvalThreshold, setApprovalThreshold] = useState(90);
+
+  // Local state for invoice line items to allow adding/deleting
+  const [invoiceLines, setInvoiceLines] = useState([]);
+
+  useEffect(() => {
+    if (selectedInvoice) {
+      setInvoiceLines(selectedInvoice.lineItems);
+    }
+  }, [selectedInvoice]);
+
+  const handleOpenInvoice = (invoice) => {
+    setSelectedInvoice(invoice);
+    setView('detail');
+  };
+
+  const handleAddRow = () => {
+    const newRow = {
+      id: `li-manual-${Date.now()}`,
+      glCode: '',
+      costCenter: '',
+      profitCenter: '',
+      amount: '0.00',
+      desc: 'Manual Allocation',
+      itemText: 'Manual Entry',
+      memo: '',
+      conf: 100,
+      aiCommentary: "Manual entry added by user for additional project allocation."
+    };
+    setInvoiceLines([...invoiceLines, newRow]);
+  };
+
+  const handleDeleteRow = (id) => {
+    setInvoiceLines(invoiceLines.filter(line => line.id !== id));
+  };
+
+  const handleUpdateLine = (id, field, value) => {
+    setInvoiceLines(invoiceLines.map(line => 
+      line.id === id ? { ...line, [field]: value } : line
+    ));
+  };
+
+  const totalAllocated = useMemo(() => {
+    const sum = invoiceLines.reduce((acc, line) => {
+      const val = parseFloat(line.amount.replace(/,/g, '')) || 0;
+      return acc + val;
+    }, 0);
+    return sum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }, [invoiceLines]);
+
+  const Dashboard = () => (
+    <div className="p-6 max-w-[1600px] mx-auto space-y-6 animate-in fade-in duration-500">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Sino Portfolio Billing</h1>
+          <p className="text-slate-500 text-sm">Managing property & hospitality invoicing across HK, SG, and Australia</p>
+        </div>
+        <button 
+          onClick={() => setIsUploading(true)}
+          className="flex items-center gap-2 px-6 py-2.5 bg-[#F47321] text-white rounded-lg hover:bg-[#d6621a] transition-all shadow-lg shadow-[#F47321]/20 font-bold"
+        >
+          <Upload className="w-4 h-4" />
+          Upload New Bill
+        </button>
       </header>
 
-      <main className="flex-1 p-6 max-w-7xl mx-auto w-full overflow-y-auto">
-        
-        {currentView === 'dashboard' && (
-          <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="bg-black rounded-sm p-12 text-white shadow-2xl mb-8 relative overflow-hidden border-l-[12px] border-[#FFE600]">
-              <div className="absolute right-0 top-0 opacity-10 -mr-16 -mt-16">
-                <Rocket size={320} />
-              </div>
-              <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
-                <div>
-                  <h2 className="text-5xl font-bold mb-6 tracking-tighter leading-[1.1]">智能体劳动力如何 <br/><span className="text-[#FFE600]">变革我们的工作方式</span></h2>
-                  <p className="text-slate-400 text-xl leading-relaxed mb-0 font-light">
-                    展示协同作业的智能大军如何从繁琐的行政任务中解放人力，加速财务决策速度。
-                  </p>
-                </div>
-                <div className="bg-[#1A1A1A] rounded-sm p-8 border border-white/5 backdrop-blur-xl shadow-2xl">
-                   <div className="flex items-center gap-3 mb-6 border-b border-white/10 pb-4">
-                      <Layers size={22} className="text-[#FFE600]" />
-                      <h3 className="font-bold uppercase tracking-[0.2em] text-sm">核心价值主张</h3>
-                   </div>
-                   <div className="space-y-6">
-                      <p className="text-sm text-slate-300 leading-relaxed">Agentic AI 是指具备推理和执行能力的自主系统，旨在主动解决问题。</p>
-                      <ul className="grid grid-cols-1 gap-4">
-                         <li className="flex gap-4 text-xs items-center group">
-                            <div className="w-2 h-2 bg-[#FFE600] group-hover:scale-125 transition-transform"></div>
-                            <span className="text-slate-200"><strong>释放精力：</strong> 将 80% 的手工数据清洗转交给智能体。</span>
-                         </li>
-                         <li className="flex gap-4 text-xs items-center group">
-                            <div className="w-2 h-2 bg-[#FFE600] group-hover:scale-125 transition-transform"></div>
-                            <span className="text-slate-200"><strong>深度诊断：</strong> 通过跨系统的秒级联动发现数字背后根因。</span>
-                         </li>
-                         <li className="flex gap-4 text-xs items-center group">
-                            <div className="w-2 h-2 bg-[#FFE600] group-hover:scale-125 transition-transform"></div>
-                            <span className="text-slate-200"><strong>决策驱动：</strong> 财务团队从“生产报告”转向“制定决策”。</span>
-                         </li>
-                      </ul>
-                   </div>
-                </div>
-              </div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {[
+          { label: 'Total Invoices', value: '142', icon: FileText, color: 'text-slate-600' },
+          { label: 'Post to SAP', value: '84', icon: CheckCircle2, color: 'text-green-500' },
+          { label: 'Needs Review', value: '12', icon: AlertCircle, color: 'text-amber-500' },
+          { label: 'Processing', value: '3', icon: Clock, color: 'text-blue-500' },
+        ].map((stat, i) => (
+          <div key={i} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+            <div className={`p-3 rounded-lg bg-slate-50 ${stat.color}`}>
+              <stat.icon className="w-6 h-6" />
             </div>
-
-            <div className="bg-white rounded-sm p-10 border border-slate-200 shadow-sm relative overflow-hidden">
-              <div className="max-w-4xl mx-auto text-center mb-12">
-                <h2 className="text-3xl font-black mb-2 uppercase tracking-tighter">Command Center</h2>
-                <p className="text-slate-400 text-[10px] mb-8 uppercase tracking-[0.3em] font-black">财务数字化协同系统</p>
-                <div className="relative group">
-                  <textarea 
-                    readOnly 
-                    value="执行2026年1月SKU业绩诊断。识别南方地区价格触发因素并提出缓解建议。运行Shingrix基于加速医院列名目标的24个月收入重估。" 
-                    className="w-full pl-14 pr-4 py-10 bg-slate-50 border-2 border-slate-200 rounded-sm text-slate-700 font-bold text-xl leading-relaxed focus:outline-none min-h-[180px] resize-none shadow-inner"
-                  />
-                  <div className="absolute top-10 left-6 flex items-center text-black"><Zap size={36} /></div>
-                  
-                  {simulationStatus === 'idle' && (
-                    <div className="absolute right-6 bottom-6 flex gap-4">
-                       <button onClick={startSim} className="px-12 py-5 bg-[#FFE600] text-black rounded-sm font-black hover:bg-black hover:text-[#FFE600] flex items-center gap-3 shadow-2xl transition-all active:scale-95 uppercase text-sm tracking-widest border-2 border-transparent">
-                          部署大军 <ChevronRight size={20} />
-                       </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {simulationStatus !== 'idle' && (
-                <div className="flex flex-col lg:flex-row gap-12 mt-12 animate-in slide-in-from-bottom-6 duration-700">
-                  <div className="flex-1 bg-slate-50 rounded-sm p-12 relative flex flex-col items-center justify-between min-h-[650px] border border-slate-100 shadow-inner">
-                    
-                    <div className="w-full flex flex-col items-center mb-10">
-                       <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-4 bg-white px-4 py-1 rounded-full border border-slate-200 shadow-sm">
-                          战略决策层 (财务总监)
-                       </div>
-                       <AgentNode id="L1-CONTROLLER" title="财务总监" icon={BrainCircuit} level={1} activeAgents={simSteps[currentStep].agents} />
-                    </div>
-
-                    <div className="w-full flex flex-col items-center mb-10">
-                       <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-4 bg-white px-4 py-1 rounded-full border border-slate-200 shadow-sm">
-                          业务管理层 (部门主管)
-                       </div>
-                       <div className="w-full flex justify-around px-8">
-                         {agentDatabase.L2.map(a => <AgentNode key={a.id} id={a.id} title={a.title.split(' ')[0]} icon={a.icon} level={2} activeAgents={simSteps[currentStep].agents} />)}
-                       </div>
-                    </div>
-
-                    <div className="w-full flex flex-col items-center mb-10">
-                       <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-4 bg-white px-4 py-1 rounded-full border border-slate-200 shadow-sm">
-                          任务执行层 (专项专家)
-                       </div>
-                       <div className="w-full flex justify-between px-4">
-                         {agentDatabase.L3.map(a => <AgentNode key={a.id} id={a.id} title={a.title.split(' ')[0]} icon={a.icon} level={3} activeAgents={simSteps[currentStep].agents} />)}
-                       </div>
-                    </div>
-
-                    <div className="w-full pt-10 border-t-2 border-slate-200 border-dashed flex justify-around items-end">
-                      {dataSources.map(s => <AgentNode key={s.id} id={s.id} title={s.name.split(' ')[0]} icon={s.icon} level={4} activeAgents={[]} isSource />)}
-                    </div>
-
-                    <svg className="absolute inset-0 w-full h-full pointer-events-none z-0" viewBox="0 0 800 650" preserveAspectRatio="none">
-                      {[0, 1, 2, 3].map(i => {
-                        const isActive = simSteps[currentStep].phase === 'command' && simSteps[currentStep].agents.some(a => a.startsWith('L2'));
-                        const xOffset = 100 + (i * 200);
-                        return <path key={`l1l2-${i}`} d={`M 400,105 C 400,160 ${xOffset},160 ${xOffset},210`} stroke={isActive ? "#FFE600" : "#e2e8f0"} strokeWidth={isActive ? 4 : 1} fill="none" className={isActive ? 'pulsing-line glow-line' : ''} />;
-                      })}
-                      {[0, 1, 2, 3, 4].map(i => {
-                        const isActive = simSteps[currentStep].agents.some(a => a.startsWith('L3'));
-                        const startX = 100 + (Math.min(i, 3) * 200); 
-                        const endX = 80 + (i * 160);
-                        return <path key={`l2l3-${i}`} d={`M ${startX},275 C ${startX},330 ${endX},330 ${endX},375`} stroke={isActive ? "#000000" : "#e2e8f0"} strokeWidth={isActive ? 2 : 1} fill="none" className={isActive ? 'pulsing-line' : ''} />;
-                      })}
-                      {[0, 1, 2, 3, 4].map(i => {
-                        const isActive = simSteps[currentStep].phase === 'harvest' && simSteps[currentStep].sources.length > 0;
-                        const x = 80 + (i * 160);
-                        return <path key={`l3l4-${i}`} d={`M ${x},440 L ${x},535`} stroke={isActive ? "#000000" : "#e2e8f0"} strokeWidth={2} fill="none" className={isActive ? 'pulsing-line' : ''} />;
-                      })}
-                    </svg>
-                  </div>
-
-                  <div className="w-full lg:w-80 flex flex-col gap-4">
-                    <div className="bg-black text-white rounded-sm p-8 flex-1 shadow-xl flex flex-col border-t-4 border-[#FFE600]">
-                      <div className="flex items-center gap-2 text-[#FFE600] mb-4 uppercase tracking-[0.2em] text-[10px] font-black">
-                        <Activity size={14}/> {simSteps[currentStep].phase === 'command' ? '指令分解' : simSteps[currentStep].phase === 'harvest' ? '数据采集' : '战略合成'}
-                      </div>
-                      <h4 className="text-xl font-bold mb-4 tracking-tight uppercase leading-tight">{simSteps[currentStep].title}</h4>
-                      <p className="text-slate-400 text-sm leading-relaxed mb-8 font-light">{simSteps[currentStep].desc}</p>
-                      
-                      <div className="mt-auto pt-8 border-t border-white/10 flex justify-between items-center">
-                        <button onClick={handleBack} disabled={currentStep === 0} className="p-3 bg-white/5 rounded-sm hover:bg-white/10 disabled:opacity-20 transition-all"><ChevronLeft size={20}/></button>
-                        <span className="text-[10px] font-mono text-slate-500 font-black uppercase tracking-widest">STEP {currentStep + 1} / 6</span>
-                        <button onClick={handleNext} className="p-3 bg-[#FFE600] text-black rounded-sm hover:bg-white transition-all"><ChevronRight size={20}/></button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+            <div>
+              <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">{stat.label}</p>
+              <p className="text-xl font-bold text-slate-800">{stat.value}</p>
             </div>
           </div>
-        )}
+        ))}
+      </div>
 
-        {currentView === 'agents' && (
-          <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-            <div className="text-center mb-10">
-              <h2 className="text-3xl font-black uppercase tracking-tighter">数字劳动力目录</h2>
-              <p className="text-slate-500 text-sm uppercase font-bold tracking-widest mt-1 italic">分层级的专业团队助力财务转型</p>
-            </div>
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+          <div className="relative w-96">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input 
+              type="text" 
+              placeholder="Search by supplier or property project..." 
+              className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#F47321]/20 focus:border-[#F47321]"
+            />
+          </div>
+        </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-              <div className="lg:col-span-4 space-y-6">
-                {Object.entries(agentDatabase).map(([level, agents]) => (
-                  <div key={level} className="space-y-3">
-                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] px-2">
-                      {level === 'L1' ? 'L1: 财务总监层' : level === 'L2' ? 'L2: 部门主管层' : 'L3: 专项专家层'}
-                    </h3>
-                    <div className="flex flex-col gap-2">
-                      {agents.map(a => (
-                        <button key={a.id} onClick={() => setInspectedAgent(a)} className={`flex items-center gap-4 p-5 rounded-sm border-2 text-left transition-all ${inspectedAgent?.id === a.id ? 'border-black bg-white shadow-xl' : 'border-transparent bg-slate-100/50 hover:bg-white hover:border-slate-200'}`}>
-                          <div className={`w-10 h-10 rounded-sm flex items-center justify-center ${inspectedAgent?.id === a.id ? 'bg-black text-[#FFE600]' : 'bg-slate-200 text-slate-500'}`}><a.icon size={20} /></div>
-                          <div>
-                            <p className="text-sm font-bold uppercase tracking-tight">{a.title}</p>
-                            <p className="text-[9px] text-slate-400 font-mono tracking-widest">{a.id}</p>
-                          </div>
-                        </button>
-                      ))}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 bg-white">
+                <th className="px-6 py-4 w-12">#</th>
+                <th className="px-6 py-4">Sino Entity</th>
+                <th className="px-6 py-4">Supplier</th>
+                <th className="px-6 py-4">Uploaded By</th>
+                <th className="px-6 py-4">Source</th>
+                <th className="px-6 py-4">Region</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4 text-right">Amount</th>
+                <th className="px-6 py-4 text-right w-20">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {MOCK_INVOICES.map((inv, idx) => (
+                <tr 
+                  key={inv.id} 
+                  className="hover:bg-slate-50 transition-colors cursor-pointer group"
+                  onClick={() => handleOpenInvoice(inv)}
+                >
+                  <td className="px-6 py-4 text-sm text-slate-400 font-mono">{String(idx + 1).padStart(2, '0')}</td>
+                  <td className="px-6 py-4 text-sm font-bold">{inv.companyName}</td>
+                  <td className="px-6 py-4 text-sm font-bold text-slate-900 uppercase">{inv.vendor}</td>
+                  <td className="px-6 py-4 text-sm text-slate-600">{inv.uploadedBy}</td>
+                  <td className="px-6 py-4 text-slate-400">
+                    <div className="flex items-center gap-1.5">
+                      {inv.uploadMethod === 'Mobile' ? <Smartphone className="w-4 h-4" /> : <Monitor className="w-4 h-4" />}
+                      <span className="text-[10px] font-bold uppercase tracking-tight text-slate-500">{inv.uploadMethod}</span>
                     </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600">
+                       {inv.fields.currency.val.slice(0,2)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${inv.status === 'Ready' ? 'bg-green-500' : 'bg-amber-500 animate-pulse'}`} />
+                      <span className="text-xs font-medium text-slate-700">{inv.status}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-right text-sm font-bold text-slate-800">{inv.fields.currency.val} {inv.amount}</td>
+                  <td className="px-6 py-4 text-right">
+                    <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-[#F47321] inline" />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+
+  const ReportingPage = () => (
+    <div className="p-6 max-w-[1600px] mx-auto space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Portfolio Analytics</h1>
+          <p className="text-slate-500 text-sm">Managing operational efficiency and spend across regional hubs</p>
+        </div>
+        <div className="flex items-center gap-3 bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
+           <Calendar className="w-4 h-4 text-slate-400 ml-2" />
+           <select className="text-sm font-bold border-none bg-transparent focus:ring-0 outline-none pr-4">
+             <option>Current Quarter (Q1 2024)</option>
+             <option>Last Month</option>
+             <option>Year to Date</option>
+             <option>Custom Range...</option>
+           </select>
+        </div>
+      </header>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {[
+          { label: 'Avg. Confidence Score', value: '94.2%', icon: Sparkles, trend: '+2.1%' },
+          { label: 'Auto-Approval Rate', value: '68%', icon: Activity, trend: '+5.4%' },
+          { label: 'Avg. Processing Time', value: '1.2s', icon: Clock, trend: '-0.3s' },
+        ].map((kpi, i) => (
+          <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="flex justify-between items-start mb-4">
+              <div className="p-2 bg-slate-50 rounded-lg">
+                <kpi.icon className="w-5 h-5 text-[#F47321]" />
+              </div>
+              <span className={`text-[10px] font-black px-2 py-1 rounded bg-green-50 text-green-600 border border-green-100`}>
+                {kpi.trend}
+              </span>
+            </div>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">{kpi.label}</p>
+            <p className="text-3xl font-black text-slate-900 mt-1">{kpi.value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
+           <div className="flex items-center justify-between mb-8">
+             <h3 className="font-bold text-slate-800 flex items-center gap-2">
+               <TrendingUp className="w-5 h-5 text-[#F47321]" />
+               Regional Spend Distribution
+             </h3>
+             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total: $7.67M</span>
+           </div>
+           <div className="space-y-6">
+              {[
+                { region: 'Sino HK Property Management', amount: 'HKD 33,150,000', usdVal: '$4,250,000', percentage: 55, color: 'bg-[#F47321]' },
+                { region: 'Sino SG Development Pte Ltd', amount: 'SGD 2,814,000', usdVal: '$2,100,000', percentage: 28, color: 'bg-[#F47321]/70' },
+                { region: 'Sino Australia Hotel Group', amount: 'AUD 1,980,000', usdVal: '$1,320,000', percentage: 17, color: 'bg-[#F47321]/40' },
+              ].map((item, i) => (
+                <div key={i} className="space-y-2">
+                  <div className="flex justify-between items-end">
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-slate-900">{item.region}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <p className="text-xs font-black text-slate-800">{item.usdVal}</p>
+                        <p className="text-[10px] text-slate-400 font-medium">({item.amount})</p>
+                      </div>
+                    </div>
+                    <span className="text-sm font-black text-slate-800">{item.percentage}%</span>
+                  </div>
+                  <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+                    <div className={`h-full ${item.color} rounded-full transition-all duration-1000`} style={{ width: `${item.percentage}%` }} />
+                  </div>
+                </div>
+              ))}
+           </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="font-bold text-slate-800 flex items-center gap-2">
+              <PieChart className="w-5 h-5 text-[#F47321]" />
+              Top Supplier Spend Ranking
+            </h3>
+          </div>
+          <div className="space-y-4">
+             {[
+               { name: 'OTIS Elevator Company HK', amount: '$1.42M', count: 42, width: '95%' },
+               { name: 'CLP Power Hong Kong', amount: '$1.15M', count: 35, width: '82%' },
+               { name: 'Sydney Water Corporation', amount: '$0.88M', count: 28, width: '68%' },
+               { name: 'Star Hotel Supplies SG', amount: '$0.62M', count: 22, width: '52%' },
+               { name: 'HK Electric Co.', amount: '$0.45M', count: 18, width: '40%' }
+             ].map((sup, i) => (
+               <div key={i} className="space-y-2 group">
+                 <div className="flex items-center justify-between px-1">
+                   <div className="flex items-center gap-3">
+                     <span className="text-xs font-black text-slate-300">0{i+1}</span>
+                     <span className="text-sm font-bold text-slate-700">{sup.name}</span>
+                   </div>
+                   <div className="text-right">
+                     <span className="text-sm font-black text-[#F47321]">{sup.amount}</span>
+                     <span className="text-[10px] text-slate-400 font-bold ml-2">({sup.count} Bills)</span>
+                   </div>
+                 </div>
+                 <div className="h-1.5 w-full bg-slate-50 rounded-full overflow-hidden">
+                   <div className={`h-full bg-slate-200 group-hover:bg-[#F47321] transition-all duration-500`} style={{ width: sup.width }} />
+                 </div>
+               </div>
+             ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const SettingsPage = () => (
+    <div className="p-6 max-w-[1600px] mx-auto space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+      <header>
+        <h1 className="text-2xl font-bold text-slate-800">Portfolio Hub Settings</h1>
+        <p className="text-slate-500 text-sm">Managing cross-regional Sino Property & Hotel extraction engines</p>
+      </header>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm space-y-8">
+           <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+             <ShieldCheck className="w-5 h-5 text-[#F47321]" />
+             Automatic Approval Engine
+           </h3>
+           <div className="space-y-8">
+              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-4">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-sm font-bold text-slate-900">Automatic Approval Threshold</p>
+                    <p className="text-xs text-slate-500">Invoices above this confidence level skip manual review</p>
+                  </div>
+                  <span className="text-2xl font-black text-[#F47321]">{approvalThreshold}%</span>
+                </div>
+                <input 
+                  type="range" 
+                  min="50" 
+                  max="100" 
+                  value={approvalThreshold} 
+                  onChange={(e) => setApprovalThreshold(e.target.value)}
+                  className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#F47321]" 
+                />
+              </div>
+
+              <div className="space-y-4">
+                 <div className="flex items-center justify-between px-2">
+                   <div>
+                     <p className="text-sm font-bold text-slate-800 tracking-tight">Post Balanced Items Automatically</p>
+                     <p className="text-xs text-slate-500">Immediately send zero-variance bills to SAP</p>
+                   </div>
+                   <div className="w-12 h-6 bg-[#F47321] rounded-full relative cursor-pointer">
+                     <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm" />
+                   </div>
+                 </div>
+                 <div className="flex items-center justify-between px-2">
+                   <div>
+                     <p className="text-sm font-bold text-slate-800 tracking-tight">Require Manager Sign-off {' > '} $50k</p>
+                     <p className="text-xs text-slate-500">Override auto-approval for high-value bills</p>
+                   </div>
+                   <div className="w-12 h-6 bg-[#F47321] rounded-full relative cursor-pointer">
+                     <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm" />
+                   </div>
+                 </div>
+              </div>
+           </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm space-y-8">
+           <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+             <Database className="w-5 h-5 text-[#F47321]" />
+             SAP S/4HANA Master Data
+           </h3>
+           <div className="p-6 rounded-2xl bg-slate-900 text-white space-y-4">
+             <div className="flex justify-between items-center">
+               <span className="text-xs font-bold text-slate-400">Global Sync Status</span>
+               <span className="text-[10px] font-black px-2 py-0.5 bg-green-500 rounded uppercase">Active</span>
+             </div>
+             <p className="text-xs leading-relaxed text-slate-300">Synchronized with HK, SG, and Australia regional instances.</p>
+             <button className="w-full py-3 bg-[#F47321] rounded-xl text-xs font-black uppercase tracking-widest mt-4 shadow-lg shadow-[#F47321]/20">
+               Force Global SAP Sync
+             </button>
+           </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const InvoiceDetail = () => (
+    <div className="h-screen flex flex-col bg-white animate-in slide-in-from-right duration-300">
+      <header className="h-16 bg-slate-900 px-6 flex items-center justify-between z-10">
+        <div className="flex items-center gap-4">
+          <button onClick={() => setView('list')} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+            <ArrowLeft className="w-5 h-5 text-white" />
+          </button>
+          <div className="h-6 w-[1px] bg-white/20" />
+          <div className="text-white">
+            <h2 className="text-sm font-bold tracking-tight uppercase tracking-widest">{selectedInvoice.vendor}</h2>
+            <p className="text-[10px] text-slate-400">{selectedInvoice.companyName}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <button className="px-4 py-2 text-white/70 hover:text-white font-bold text-xs uppercase tracking-widest transition-colors">Save Progress</button>
+          <button className="px-6 py-2 bg-[#F47321] text-white rounded-lg font-black text-xs uppercase tracking-widest shadow-lg shadow-[#F47321]/30 hover:bg-[#d6621a] transition-all">Post to SAP</button>
+        </div>
+      </header>
+
+      <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 bg-slate-100 p-8 overflow-auto border-r border-slate-200 relative">
+          <div className="bg-white aspect-[1/1.414] w-full max-w-2xl mx-auto shadow-2xl p-12 relative rounded-sm border border-slate-200">
+             <div className="flex justify-between items-start mb-12 border-b border-slate-100 pb-8">
+               <div className="w-40 h-16 border-2 border-slate-100 rounded-lg flex items-center justify-center text-slate-100 font-black italic select-none uppercase tracking-tighter leading-none text-center">VENDOR<br/>LOGO</div>
+               <div className="text-right">
+                 <h1 className="text-3xl font-black text-slate-800 tracking-tighter">TAX INVOICE</h1>
+                 <p className="text-slate-400 font-mono text-sm tracking-widest">{selectedInvoice.id}</p>
+                 <p className="text-slate-400 text-xs">Dated: {selectedInvoice.date}</p>
+               </div>
+             </div>
+             
+             <div className="grid grid-cols-2 gap-12 mb-12 text-sm">
+                <div>
+                  <p className="font-bold text-slate-400 uppercase text-[10px] mb-2 tracking-widest">From Supplier</p>
+                  <p className="font-bold text-lg text-slate-900">{selectedInvoice.vendor}</p>
+                  <p className="text-slate-500 italic mt-1 text-xs underline underline-offset-4 decoration-[#F47321]/30 cursor-help">Verified SAP Vendor Record</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-slate-400 uppercase text-[10px] mb-2 tracking-widest">Billed To Sino Entity</p>
+                  <p className="font-bold text-[#F47321]">{selectedInvoice.companyName}</p>
+                  <p className="text-slate-500 font-mono text-xs">Hub: {selectedInvoice.companyCode}</p>
+                </div>
+             </div>
+
+             <div className="mt-12 space-y-4">
+                <div className="flex justify-between font-bold text-[10px] text-slate-400 uppercase border-b border-slate-200 pb-2 tracking-widest">
+                   <span>Service Description</span>
+                   <span>Value ({selectedInvoice.fields.currency.val})</span>
+                </div>
+                {invoiceLines.map((li, i) => (
+                  <div key={i} className={`flex justify-between text-sm py-4 border-b border-slate-50 transition-colors`}>
+                    <div className="flex flex-col gap-1">
+                       <span className="text-slate-900 font-bold">{li.desc}</span>
+                       <span className="text-[10px] text-slate-400 italic font-medium">Auto-Label: {li.itemText}</span>
+                    </div>
+                    <span className="font-black text-slate-900 text-base">{li.amount}</span>
                   </div>
                 ))}
-              </div>
-
-              <div className="lg:col-span-8">
-                {inspectedAgent && (
-                  <div className="bg-white rounded-sm border border-slate-200 shadow-sm p-12 animate-in fade-in zoom-in-95 sticky top-6">
-                    <div className="flex justify-between items-start mb-12 pb-12 border-b border-slate-100">
-                      <div className="flex gap-8 items-center">
-                        <div className="w-20 h-20 bg-black text-[#FFE600] rounded-sm flex items-center justify-center shadow-2xl"><inspectedAgent.icon size={40} /></div>
-                        <div>
-                          <h3 className="text-4xl font-black tracking-tighter uppercase">{inspectedAgent.title}</h3>
-                          <div className="flex gap-3 mt-3">
-                            <span className="px-4 py-1.5 bg-slate-100 text-[10px] font-black rounded-sm uppercase tracking-widest">{inspectedAgent.level}级 权限状态</span>
-                            <span className="px-4 py-1.5 bg-[#FFE600] text-black text-[10px] font-black rounded-sm uppercase tracking-widest">EY-SECURE V2</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-12">
-                      <div>
-                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-6 flex items-center gap-3"><Info size={16}/> 核心职责定义</h4>
-                        <p className="text-slate-600 text-lg leading-relaxed bg-slate-50 p-8 rounded-sm border border-slate-100 font-light italic">"{inspectedAgent.role}"</p>
-                      </div>
-
-                      <div>
-                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-6 flex items-center gap-3"><Code size={16}/> 核心工具与 API 集成</h4>
-                        <div className="grid grid-cols-1 gap-6">
-                          {inspectedAgent.tools.map((tool: Tool, i: number) => (
-                            <div key={i} className="p-6 bg-black text-white rounded-sm border-l-8 border-[#FFE600] group hover:bg-[#111] transition-colors">
-                              <div className="flex justify-between items-center mb-3">
-                                <span className="text-sm font-black text-[#FFE600] font-mono uppercase tracking-[0.2em]">{tool.name}</span>
-                                <CheckCircle2 size={16} className="text-[#FFE600]" />
-                              </div>
-                              <p className="text-sm text-slate-400 leading-relaxed font-light">{tool.desc}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {currentView === 'multi-agent' && (
-          <div className="space-y-8 animate-in fade-in duration-500">
-             <div className="text-center max-w-2xl mx-auto">
-                <h2 className="text-3xl font-bold mb-2 uppercase tracking-tighter">多智能体架构的优势</h2>
-                <p className="text-slate-500 text-sm uppercase tracking-widest font-bold">协同架构 vs 单体人工智能 (Monolithic AI)</p>
              </div>
 
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="bg-white rounded-sm border border-slate-200 p-10 shadow-sm">
-                   <div className="flex gap-4 mb-8">
-                      <div className="w-12 h-12 bg-rose-50 rounded-sm flex items-center justify-center text-rose-500">
-                         <AlertCircle size={24}/>
-                      </div>
-                      <div>
-                         <h4 className="font-bold text-xl tracking-tight">单体架构风险</h4>
-                         <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mt-1">单一通用型 AI</p>
-                      </div>
-                   </div>
-                   <ul className="space-y-6">
-                      <li className="flex gap-4 items-start">
-                         <div className="mt-1.5 w-2 h-2 bg-rose-400 shrink-0"></div>
-                         <div>
-                            <p className="text-sm font-bold text-slate-800 uppercase tracking-tight">认知负荷过重</p>
-                            <p className="text-xs text-slate-500 leading-relaxed mt-1">在单一上下文窗口中管理 50 多个 API 和数千页政策会导致“幻觉”和推理能力下降。</p>
-                         </div>
-                      </li>
-                      <li className="flex gap-4 items-start">
-                         <div className="mt-1.5 w-2 h-2 bg-rose-400 shrink-0"></div>
-                         <div>
-                            <p className="text-sm font-bold text-slate-800 uppercase tracking-tight">安全漏洞面</p>
-                            <p className="text-xs text-slate-500 leading-relaxed mt-1">拥有所有访问权限的单一智能体是巨大隐患。一旦遭到入侵，整个企业的核心数据都会面临风险。</p>
-                         </div>
-                      </li>
-                   </ul>
-                </div>
-
-                <div className="bg-[#2E2E2E] rounded-sm p-10 shadow-xl text-white relative overflow-hidden border-l-8 border-[#FFE600]">
-                   <div className="absolute top-0 right-0 p-6 opacity-5">
-                      <Network size={200} />
-                   </div>
-                   <div className="flex gap-4 mb-8 relative z-10">
-                      <div className="w-12 h-12 bg-[#FFE600] rounded-sm flex items-center justify-center text-black">
-                         <Network size={24}/>
-                      </div>
-                      <div>
-                         <h4 className="font-bold text-xl tracking-tight text-[#FFE600]">分层协同标准</h4>
-                         <p className="text-white/40 text-[10px] uppercase font-bold tracking-widest mt-1">协同智能体劳动力</p>
-                      </div>
-                   </div>
-                   <ul className="space-y-6 relative z-10">
-                      <li className="flex gap-4 items-start">
-                         <div className="mt-1.5 w-2 h-2 bg-[#FFE600] shrink-0"></div>
-                         <div>
-                            <p className="text-sm font-bold uppercase tracking-tight">精密专业化</p>
-                            <p className="text-xs text-slate-400 leading-relaxed mt-1">领域智能体在隔离的窗口中运行，确保特定任务在数学计算和政策解读上的高度准确性。</p>
-                         </div>
-                      </li>
-                      <li className="flex gap-4 items-start">
-                         <div className="mt-1.5 w-2 h-2 bg-[#FFE600] shrink-0"></div>
-                         <div>
-                            <p className="text-sm font-bold uppercase tracking-tight">安全隔离</p>
-                            <p className="text-xs text-slate-400 leading-relaxed mt-1">遵循“最小权限”原则，确保智能体仅访问其子任务所需的工具，从而保护核心数据。</p>
-                         </div>
-                      </li>
-                      <li className="flex gap-4 items-start">
-                         <div className="mt-1.5 w-2 h-2 bg-[#FFE600] shrink-0"></div>
-                         <div>
-                            <p className="text-sm font-bold uppercase tracking-tight">结构化冗余</p>
-                            <p className="text-xs text-slate-400 leading-relaxed mt-1">独立的执行者互相验证输出，错误在报告合成前即由管理层捕捉，显著提升可靠性。</p>
-                         </div>
-                      </li>
-                   </ul>
+             <div className="mt-16 pt-8 border-t-2 border-slate-900 flex justify-between items-end">
+                <div className="text-slate-400 text-[10px] uppercase tracking-tighter font-bold italic">Sino Internal Compliance: Property Audit Ready</div>
+                <div className="text-right">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Payables</p>
+                  <p className="text-4xl font-black text-slate-900 tracking-tighter">
+                    <span className="text-sm font-bold text-slate-400 mr-2">{selectedInvoice.fields.currency.val}</span>
+                    {selectedInvoice.amount}
+                  </p>
                 </div>
              </div>
           </div>
-        )}
+        </div>
 
-        {currentView === 'report' && (
-          <div className="space-y-12 animate-in zoom-in-95 duration-500 pb-12">
-            <div className="bg-black text-white rounded-sm p-16 relative overflow-hidden shadow-2xl border-l-[16px] border-[#FFE600]">
-              <div className="absolute top-0 right-0 p-8 opacity-10 text-[#FFE600]"><TrendingIcon size={240} /></div>
-              <div className="relative z-10">
-                <div className="flex items-center gap-4 mb-8 text-[#FFE600] uppercase font-black text-sm tracking-[0.6em]">
-                  <Activity size={24}/> 自动化战略诊断输出
-                </div>
-                <h2 className="text-6xl font-black mb-8 tracking-tighter uppercase leading-[0.9]">业绩分析报告 <br/><span className="text-[#FFE600]">2026年1月</span></h2>
-                <div className="flex flex-wrap gap-6">
-                  <span className="px-8 py-3 bg-white/10 rounded-sm text-xs font-black border border-white/20 flex items-center gap-3 uppercase tracking-widest">
-                     <AlertCircle size={18} className="text-[#FFE600]" />
-                     优先级：需要调整预算计划
-                  </span>
-                  <span className="px-8 py-3 bg-emerald-500/20 text-emerald-400 rounded-sm text-xs font-black border border-emerald-500/20 flex items-center gap-3 uppercase tracking-widest">
-                     <CheckCircle2 size={18} className="text-emerald-400" />
-                     认证状态：通过完整审计验证
-                  </span>
+        <div className="w-[500px] flex flex-col bg-white overflow-hidden shadow-xl border-l border-slate-200">
+          <div className="flex-1 overflow-y-auto p-6 space-y-8">
+            <section className="space-y-4">
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] border-b border-slate-100 pb-2">Header Extraction (AI)</h3>
+              <div className="space-y-4">
+                <SearchableSelect label="Sino Company Unit" value={selectedInvoice.fields.company.val} options={MOCK_DATA.companies.map(c => c.label)} confidence={selectedInvoice.fields.company.conf} onChange={() => {}} />
+                <SearchableSelect label="Verified Supplier" value={selectedInvoice.fields.supplier.val} options={MOCK_DATA.suppliers} confidence={selectedInvoice.fields.supplier.conf} onChange={() => {}} />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between"><label className="text-xs font-bold text-slate-600">Document Date</label><ConfidenceBadge score={selectedInvoice.fields.date.conf} /></div>
+                    <input type="date" defaultValue={selectedInvoice.date} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm font-medium outline-none focus:ring-1 focus:ring-[#F47321]" />
+                  </div>
+                  <SearchableSelect label="Currency" value={selectedInvoice.fields.currency.val} options={MOCK_DATA.currencies} confidence={selectedInvoice.fields.currency.conf} onChange={() => {}} />
                 </div>
               </div>
-            </div>
+            </section>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-              <div className="lg:col-span-2 bg-white rounded-sm border border-slate-200 p-12 shadow-sm">
-                <div className="flex justify-between items-center mb-12">
-                  <h3 className="text-2xl font-black flex items-center gap-4 uppercase tracking-tight"><BarChart3 size={28} className="text-black"/> 1. 差异分析与组合健康度</h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
-                  <div className="space-y-10">
-                    <div className="overflow-x-auto">
-                       <table className="w-full text-left">
-                         <thead className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] border-b pb-6">
-                           <tr><th className="pb-6">核心业务组合</th><th className="pb-6 text-right">实际营收</th><th className="pb-6 text-right">差异 %</th></tr>
-                         </thead>
-                         <tbody className="divide-y divide-slate-100">
-                           {[
-                              { label: '疫苗业务集群', val: '¥450M', v: '+7.1%', s: 'up' },
-                              { label: '呼吸系统中心', val: '¥210M', v: '-14.3%', s: 'down' },
-                              { label: '特药核心资产', val: '¥180M', v: '+2.8%', s: 'up' }
-                           ].map((row, i) => (
-                              <tr key={i}><td className="py-6 font-black uppercase tracking-tight text-slate-800 text-lg">{row.label}</td><td className="py-6 text-right font-medium text-lg">¥{row.val}</td><td className={`py-6 text-right font-black text-xl ${row.s === 'up' ? 'text-emerald-600' : 'text-rose-600'}`}>{row.v}</td></tr>
-                           ))}
-                         </tbody>
-                       </table>
+            <section className="space-y-6">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Project allocations</h3>
+                <button 
+                  onClick={handleAddRow}
+                  className="flex items-center gap-1 text-[10px] font-bold text-[#F47321] uppercase hover:underline"
+                >
+                  <Plus className="w-3 h-3"/> New row
+                </button>
+              </div>
+
+              {invoiceLines.map((li, idx) => (
+                <div key={li.id} className="border border-slate-200 bg-slate-50/50 rounded-2xl overflow-hidden shadow-sm transition-all mb-4">
+                  <div className="p-4 bg-white border-b border-slate-100 flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black text-[#F47321] bg-[#F47321]/10 px-2 py-1 rounded tracking-tighter">ITEM {String(idx+1).padStart(2, '0')}</span>
+                      <ConfidenceBadge score={li.conf} />
                     </div>
+                    <button 
+                      onClick={() => handleDeleteRow(li.id)}
+                      className="text-slate-300 hover:text-red-500 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
-                  <div className="flex flex-col items-center justify-center bg-slate-50 rounded-sm p-10 border border-slate-100">
-                    <p className="text-[10px] font-black text-slate-400 uppercase mb-8 tracking-[0.4em]">营收分布占比</p>
-                    <div className="relative w-52 h-52">
-                      <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
-                        <circle cx="18" cy="18" r="16" fill="transparent" stroke="#FFE600" strokeWidth="6" strokeDasharray="50 100" />
-                        <circle cx="18" cy="18" r="16" fill="transparent" stroke="#000000" strokeWidth="6" strokeDasharray="25 100" strokeDashoffset="-50" />
-                        <circle cx="18" cy="18" r="16" fill="transparent" stroke="#cbd5e1" strokeWidth="6" strokeDasharray="25 100" strokeDashoffset="-75" />
-                      </svg>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                         <span className="text-3xl font-black uppercase tracking-tighter">¥1.2B</span>
-                         <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">1月 总计</span>
+
+                  <div className="p-4 space-y-4">
+                    <div className="bg-[#F47321]/5 border border-[#F47321]/10 p-3 rounded-xl flex items-start gap-3">
+                       <Sparkles className="w-4 h-4 text-[#F47321] shrink-0 mt-0.5" />
+                       <div className="space-y-0.5">
+                         <p className="text-[10px] font-black text-[#F47321] uppercase tracking-wider">AI Insight</p>
+                         <p className="text-xs text-slate-700 italic leading-relaxed">{li.aiCommentary}</p>
+                       </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="col-span-2">
+                        <SearchableSelect 
+                          label="SAP GL Account" 
+                          value={li.glCode} 
+                          options={MOCK_DATA.glAccounts} 
+                          confidence={li.conf} 
+                          onChange={(val) => handleUpdateLine(li.id, 'glCode', val)} 
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase">Amount</label>
+                        <input 
+                          type="text" 
+                          value={li.amount} 
+                          onChange={(e) => handleUpdateLine(li.id, 'amount', e.target.value)}
+                          className="w-full bg-white border border-slate-200 rounded-lg px-2 py-2.5 text-xs font-black text-right outline-none focus:border-[#F47321]" 
+                        />
                       </div>
                     </div>
-                  </div>
-                </div>
-              </div>
 
-              <div className="bg-white rounded-sm border border-slate-200 p-12 shadow-sm flex flex-col">
-                <h3 className="font-black flex items-center gap-4 mb-10 text-2xl uppercase tracking-tight"><Search size={28} className="text-black"/> 2. 根因诊断 (Root-Cause)</h3>
-                <div className="flex-1 space-y-10">
-                  <div className="p-8 bg-[#FFE600]/5 border-l-8 border-[#FFE600] rounded-sm relative overflow-hidden">
-                    <p className="text-[10px] font-black text-black mb-4 uppercase tracking-[0.3em]">政策信号</p>
-                    <p className="text-lg text-slate-700 leading-relaxed font-light italic">“GPO 抓取工具识别出南方地区招标导致的价格侵蚀。呼吸系统资产的实际价格在1月10日强制下降了25%。”</p>
-                  </div>
-                  <div className="p-8 bg-slate-50 border-l-8 border-black rounded-sm relative overflow-hidden">
-                    <p className="text-[10px] font-black text-black mb-4 uppercase tracking-[0.3em]">商业逻辑验证</p>
-                    <p className="text-lg text-slate-700 leading-relaxed font-light italic">“CRM 专家确认，由于局部医院准入限制，南方地区的一线代表学术互动时长减少了15%。”</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <SearchableSelect 
+                        label="Profit Center" 
+                        value={li.profitCenter} 
+                        options={MOCK_DATA.profitCenters} 
+                        confidence={li.conf > 90 ? li.conf : li.conf - 2} 
+                        onChange={(val) => handleUpdateLine(li.id, 'profitCenter', val)} 
+                      />
+                      <SearchableSelect 
+                        label="Cost Center" 
+                        value={li.costCenter} 
+                        options={MOCK_DATA.costCenters} 
+                        confidence={li.conf > 90 ? li.conf : li.conf - 5} 
+                        onChange={(val) => handleUpdateLine(li.id, 'costCenter', val)} 
+                      />
+                    </div>
 
-            <div className="bg-white rounded-sm border border-slate-200 p-12 shadow-sm">
-               <h3 className="text-3xl font-black flex items-center gap-5 mb-12 uppercase tracking-tight"><TrendingIcon size={32} className="text-black"/> 3. 预测性重新预估 (Reforecast)</h3>
-               <div className="grid grid-cols-1 lg:grid-cols-4 gap-16">
-                  <div className="lg:col-span-3 h-80 relative bg-slate-50 rounded-sm border border-slate-100 p-12">
-                    <svg className="w-full h-full overflow-visible" viewBox="0 0 1000 100">
-                       <line x1="0" y1="100" x2="1000" y2="100" stroke="#e2e8f0" strokeWidth="1" />
-                       <path d="M 0,50 L 250,45 L 500,55 L 750,60 L 1000,65" fill="none" stroke="#cbd5e1" strokeWidth="3" strokeDasharray="8" />
-                       <path d="M 0,50 L 250,45 L 500,35 L 750,20 L 1000,5" fill="none" stroke="#FFE600" strokeWidth="6" className="glow-line" />
-                       <circle cx="500" cy="35" r="7" fill="black" />
-                       <circle cx="1000" cy="5" r="8" fill="#FFE600" stroke="black" strokeWidth="3" />
-                    </svg>
-                    <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-black text-[#FFE600] border-2 border-[#FFE600] px-8 py-3 rounded-sm shadow-2xl text-sm font-black uppercase tracking-[0.4em]">
-                        预估营收回收率: +¥42M
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">AI Item Text</label>
+                        <ConfidenceBadge score={li.conf > 90 ? li.conf : li.conf - 2} />
+                      </div>
+                      <input 
+                        type="text" 
+                        value={li.itemText} 
+                        onChange={(e) => handleUpdateLine(li.id, 'itemText', e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-lg px-2 py-2.5 text-xs font-medium italic focus:border-[#F47321] outline-none shadow-sm" 
+                      />
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-100">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Audit Memo / Property Note</label>
+                      <textarea 
+                        rows="2" 
+                        placeholder="Add site-specific notes..." 
+                        value={li.memo}
+                        onChange={(e) => handleUpdateLine(li.id, 'memo', e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs italic resize-none outline-none shadow-inner" 
+                      />
                     </div>
                   </div>
-                  <div className="flex flex-col gap-8 justify-center">
-                     <div className="p-8 bg-slate-50 rounded-sm border-l-[12px] border-[#FFE600]">
-                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">NPV 增量</p>
-                        <p className="text-4xl font-black text-emerald-600">+12.4%</p>
-                     </div>
-                     <div className="p-8 bg-slate-50 rounded-sm border-l-[12px] border-black">
-                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">流动性水平</p>
-                        <p className="text-4xl font-black text-black">94%</p>
-                     </div>
-                  </div>
+                </div>
+              ))}
+            </section>
+          </div>
+          
+          <div className="p-6 bg-slate-900 text-white shadow-2xl">
+             <div className="flex justify-between items-end">
+               <div>
+                 <p className="text-[10px] font-bold text-slate-500 uppercase mb-1 tracking-widest">Amount Allocated</p>
+                 <p className="text-2xl font-black tracking-tighter">
+                   <span className="text-xs font-bold text-slate-500 mr-2 uppercase">{selectedInvoice.fields.currency.val}</span>
+                   {totalAllocated}
+                 </p>
                </div>
-            </div>
-
-            <div className="bg-black rounded-sm p-16 text-white relative overflow-hidden shadow-2xl border-l-[16px] border-[#FFE600]">
-              <div className="absolute bottom-0 right-0 p-8 opacity-5"><ShieldCheck size={300} /></div>
-              <div className="flex items-center gap-4 mb-12 text-[#FFE600] font-black uppercase text-sm tracking-[0.6em]"><Rocket size={24}/> 4. 建议行动清单 (Recommended Actions)</div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-16 relative z-10">
-                <div className="space-y-6">
-                  <div className="w-14 h-14 bg-[#FFE600] text-black rounded-sm flex items-center justify-center font-black text-2xl shadow-xl">1</div>
-                  <h4 className="font-black text-2xl uppercase tracking-tighter leading-tight">资产组合 <br/>战略性转向</h4>
-                  <p className="text-slate-400 text-lg font-light leading-relaxed">
-                     立即将 <strong>¥12.5M</strong> 的营销预算从价格受损严重的地区重新分配给处于高需求的疫苗业务。这将在利用现有库存的同时保护绝对利润率。
-                  </p>
-                </div>
-                <div className="space-y-6">
-                  <div className="w-14 h-14 bg-[#FFE600] text-black rounded-sm flex items-center justify-center font-black text-2xl shadow-xl">2</div>
-                  <h4 className="font-black text-2xl uppercase tracking-tighter leading-tight">数字化 <br/>学术互动</h4>
-                  <p className="text-slate-400 text-lg font-light leading-relaxed">
-                     为南方地区的医生激活“混合数字化”互动模式。目标是实现 65% 的数字化覆盖，以规避物理访问障碍，维持处方量拉动。
-                  </p>
-                </div>
-                <div className="space-y-6">
-                  <div className="w-14 h-14 bg-[#FFE600] text-black rounded-sm flex items-center justify-center font-black text-2xl shadow-xl">3</div>
-                  <h4 className="font-black text-2xl uppercase tracking-tighter leading-tight">VBP 采购 <br/>风险防御</h4>
-                  <p className="text-slate-400 text-lg font-light leading-relaxed">
-                     执行 L2 市场准入智能体针对 Q2 招标的模拟。在特药组合中建立强制性的价格底线，以维护全国价格体系完整性，防止跨区域侵蚀。
-                  </p>
-                </div>
-              </div>
-            </div>
+               <div className="text-right">
+                  <div className={`flex items-center gap-2 text-xs font-bold mb-1 ${totalAllocated === selectedInvoice.amount ? 'text-green-400' : 'text-amber-400'}`}>
+                    {totalAllocated === selectedInvoice.amount ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                    {totalAllocated === selectedInvoice.amount ? 'SAP BALANCED' : 'VARIANCE DETECTED'}
+                  </div>
+                  <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest italic decoration-[#F47321] underline decoration-2 underline-offset-4">Region Ready</p>
+               </div>
+             </div>
           </div>
-        )}
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 flex flex-col relative">
+      <nav className="h-16 bg-[#1a1a1a] flex-shrink-0 flex items-center justify-between px-6 sticky top-0 z-40 border-b border-white/5">
+        <div className="flex items-center gap-12">
+          <div className="flex items-center gap-3 select-none">
+            <div className="w-8 h-8 rounded bg-[#F47321] flex items-center justify-center shadow-lg shadow-[#F47321]/30">
+               <FileText className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-white font-black tracking-tighter text-2xl uppercase">SINO<span className="text-[#F47321]">SCAN</span></span>
+          </div>
+
+          <div className="hidden md:flex items-center gap-1">
+            {[
+              { icon: LayoutDashboard, label: 'Dashboard' },
+              { icon: BarChart3, label: 'Reporting' },
+              { icon: Settings, label: 'Settings' },
+            ].map((item, i) => (
+              <button 
+                key={i} 
+                onClick={() => { setActiveTab(item.label); setView('list'); }}
+                className={`flex items-center gap-2 px-5 py-2 rounded-lg transition-all text-sm font-bold tracking-tight ${activeTab === item.label ? 'bg-[#F47321] text-white shadow-lg shadow-[#F47321]/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+              >
+                <item.icon className="w-4 h-4" />
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 pl-4 border-l border-white/10">
+            <div className="text-right hidden sm:block">
+              <p className="text-xs font-bold text-white uppercase tracking-tighter">Finance Hub Admin</p>
+              <p className="text-[10px] text-slate-500 font-mono tracking-widest text-[#F47321]">REGION: APAC</p>
+            </div>
+            <div className="w-9 h-9 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center text-xs font-bold text-white shadow-inner">ADM</div>
+            <button className="p-2 text-slate-500 hover:text-red-400 transition-colors">
+               <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      <main className="flex-1 overflow-hidden relative">
+        {activeTab === 'Dashboard' && (view === 'list' ? <Dashboard /> : <InvoiceDetail />)}
+        {activeTab === 'Reporting' && <ReportingPage />}
+        {activeTab === 'Settings' && <SettingsPage />}
       </main>
 
-      <footer className="bg-white border-t border-slate-200 px-6 py-4 flex justify-between items-center text-[10px] text-slate-400 font-bold uppercase tracking-widest z-50">
-         <div className="flex gap-6">
-           <span>节点：14个活跃中</span>
-           <span>安全等级：RSA-4096 / GXP</span>
-           <span>审计：记录不可篡改</span>
-         </div>
-         <p>© 2026 全球财务运营 • 智能体劳动力原型 v3.6</p>
-      </footer>
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-4">
+        {isAiOpen && (
+          <div className="w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
+             <div className="bg-[#1a1a1a] p-4 flex justify-between items-center">
+               <div className="flex items-center gap-2">
+                 <Sparkles className="w-4 h-4 text-[#F47321]" />
+                 <span className="text-white text-xs font-bold tracking-widest uppercase">Sino Portfolio AI</span>
+               </div>
+               <button onClick={() => setIsAiOpen(false)}><X className="w-4 h-4 text-slate-400" /></button>
+             </div>
+             <div className="p-4 space-y-4 h-64 overflow-y-auto bg-slate-50/50">
+               <div className="bg-white p-4 rounded-2xl border border-slate-200 text-xs leading-relaxed text-slate-700 shadow-sm relative">
+                 <div className="absolute -left-1 top-4 w-2 h-2 bg-white border-l border-t border-slate-200 rotate-45" />
+                 I can help you adjust these entries. Try "Split Item 1 50/50 between HK and SG hubs".
+               </div>
+               <div className="space-y-2">
+                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">AI Tools</p>
+                 <button className="w-full text-left p-3 rounded-xl hover:bg-[#F47321]/5 text-xs text-slate-700 border border-slate-200 transition-all font-medium flex items-center gap-2">
+                   <Calculator className="w-3.5 h-3.5 text-blue-500" />
+                   "Calculate regional tax splits"
+                 </button>
+               </div>
+             </div>
+             <div className="p-4 border-t border-slate-100 bg-white">
+                <div className="relative group">
+                  <input type="text" placeholder="Ask AI..." className="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:bg-white" />
+                  <button className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-[#F47321] text-white rounded-lg"><ChevronRight className="w-4 h-4" /></button>
+                </div>
+             </div>
+          </div>
+        )}
+        <button 
+          onClick={() => setIsAiOpen(!isAiOpen)}
+          className={`w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 transform ${isAiOpen ? 'bg-slate-900 rotate-90 scale-90' : 'bg-[#F47321] hover:scale-110'}`}
+        >
+          {isAiOpen ? <X className="text-white w-6 h-6" /> : <Sparkles className="text-white w-6 h-6 animate-pulse" />}
+        </button>
+      </div>
+
+      {isUploading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+           <div className="bg-white w-full max-w-xl rounded-3xl shadow-2xl p-10 space-y-8 animate-in zoom-in-95">
+              <div className="text-center">
+                <div className="w-20 h-20 bg-[#F47321]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Upload className="w-10 h-10 text-[#F47321]" />
+                </div>
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Upload Property Bill</h3>
+              </div>
+              <div className="border-3 border-dashed border-slate-200 rounded-3xl p-16 text-center hover:border-[#F47321] hover:bg-[#F47321]/5 cursor-pointer group">
+                <ImageIcon className="w-12 h-12 text-slate-200 group-hover:text-[#F47321] mx-auto mb-4" />
+                <p className="text-lg font-black text-slate-800">Drop Sino Bills here</p>
+              </div>
+              <div className="flex gap-4">
+                <button onClick={() => setIsUploading(false)} className="flex-1 py-4 border border-slate-200 rounded-2xl font-bold text-sm text-slate-600">Cancel</button>
+                <button onClick={() => setIsUploading(false)} className="flex-1 py-4 bg-[#F47321] text-white rounded-2xl font-black text-sm">Start Batch Process</button>
+              </div>
+           </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -695,7 +695,7 @@ const App = () => {
           <div className="w-[500px] flex flex-col bg-white overflow-hidden shadow-xl border-l border-slate-200">
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
               <section className="space-y-4">
-                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] border-b border-slate-100 pb-2">Header Extraction (AI)</h3>
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] border-b border-slate-100 pb-2">Header</h3>
                 <div className="space-y-4">
                   <SearchableSelect label="Sino Company Unit" value={selectedInvoice.fields.company.val} options={MOCK_DATA.companies.map(c => c.label)} confidence={selectedInvoice.fields.company.conf} onChange={() => {}} />
                   <SearchableSelect label="Verified Supplier" value={selectedInvoice.fields.supplier.val} options={MOCK_DATA.suppliers} confidence={selectedInvoice.fields.supplier.conf} onChange={() => {}} />
@@ -711,7 +711,7 @@ const App = () => {
 
               <section className="space-y-6">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Project allocations</h3>
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Line Items</h3>
                   {!isPosted && (
                     <button 
                       onClick={handleAddRow}
@@ -832,7 +832,7 @@ const App = () => {
                       {totalAllocated === selectedInvoice.amount ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
                       {totalAllocated === selectedInvoice.amount ? 'SAP BALANCED' : 'VARIANCE DETECTED'}
                     </div>
-                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest italic decoration-[#F47321] underline decoration-2 underline-offset-4">Region Ready</p>
+                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest italic decoration-[#F47321] underline decoration-2 underline-offset-4"></p>
                  </div>
                </div>
             </div>

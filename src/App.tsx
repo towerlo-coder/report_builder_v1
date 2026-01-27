@@ -321,15 +321,15 @@ const App = () => {
     <div className="p-6 max-w-[1600px] mx-auto space-y-6 animate-in fade-in duration-500">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Sino Portfolio Billing</h1>
-          <p className="text-slate-500 text-sm">Managing property & hospitality invoicing across HK, SG, and Australia</p>
+          <h1 className="text-2xl font-bold text-slate-800">SinoScanAI Dashboard</h1>
+          <p className="text-slate-500 text-sm">AI-Enabled Invoice Processing Hub</p>
         </div>
         <button 
           onClick={() => setIsUploading(true)}
           className="flex items-center gap-2 px-6 py-2.5 bg-[#F47321] text-white rounded-lg hover:bg-[#d6621a] transition-all shadow-lg shadow-[#F47321]/20 font-bold"
         >
           <Upload className="w-4 h-4" />
-          Upload New Bill
+          Upload New Invoice
         </button>
       </header>
 
@@ -337,7 +337,7 @@ const App = () => {
         {[
           { label: 'Total Invoices', value: '142', icon: FileText, color: 'text-slate-600' },
           { label: 'Post to SAP', value: '84', icon: CheckCircle2, color: 'text-green-500' },
-          { label: 'Needs Review', value: '12', icon: AlertCircle, color: 'text-amber-500' },
+          { label: 'Pending Review', value: '12', icon: AlertCircle, color: 'text-amber-500' },
           { label: 'Processing', value: '3', icon: Clock, color: 'text-blue-500' },
         ].map((stat, i) => (
           <div key={i} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
@@ -684,7 +684,7 @@ const App = () => {
           <div className="w-[500px] flex flex-col bg-white overflow-hidden shadow-xl border-l border-slate-200">
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
               <section className="space-y-4">
-                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] border-b border-slate-100 pb-2">Header Extraction (AI)</h3>
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] border-b border-slate-100 pb-2">Header</h3>
                 <div className="space-y-4">
                   <SearchableSelect label="Sino Company Unit" value={selectedInvoice.fields.company.val} options={MOCK_DATA.companies.map(c => c.label)} confidence={selectedInvoice.fields.company.conf} onChange={() => {}} />
                   <SearchableSelect label="Verified Supplier" value={selectedInvoice.fields.supplier.val} options={MOCK_DATA.suppliers} confidence={selectedInvoice.fields.supplier.conf} onChange={() => {}} />
@@ -700,7 +700,7 @@ const App = () => {
 
               <section className="space-y-6">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Project allocations</h3>
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Line Items</h3>
                   <button 
                     onClick={handleAddRow}
                     className="flex items-center gap-1 text-[10px] font-bold text-[#F47321] uppercase hover:underline"
@@ -803,7 +803,7 @@ const App = () => {
             <div className="p-6 bg-slate-900 text-white shadow-2xl">
                <div className="flex justify-between items-end">
                  <div>
-                   <p className="text-[10px] font-bold text-slate-500 uppercase mb-1 tracking-widest">Amount Allocated</p>
+                   <p className="text-[10px] font-bold text-slate-500 uppercase mb-1 tracking-widest">Total Amount</p>
                    <p className="text-2xl font-black tracking-tighter">
                      <span className="text-xs font-bold text-slate-500 mr-2 uppercase">{selectedInvoice.fields.currency.val}</span>
                      {totalAllocated}
@@ -814,7 +814,7 @@ const App = () => {
                       {totalAllocated === selectedInvoice.amount ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
                       {totalAllocated === selectedInvoice.amount ? 'SAP BALANCED' : 'VARIANCE DETECTED'}
                     </div>
-                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest italic decoration-[#F47321] underline decoration-2 underline-offset-4">Region Ready</p>
+                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest italic decoration-[#F47321] underline decoration-2 underline-offset-4">###</p>
                  </div>
                </div>
             </div>
@@ -856,10 +856,10 @@ const App = () => {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3 pl-4 border-l border-white/10">
             <div className="text-right hidden sm:block">
-              <p className="text-xs font-bold text-white uppercase tracking-tighter">Finance Hub Admin</p>
+              <p className="text-xs font-bold text-white uppercase tracking-tighter">Ada Wong</p>
               <p className="text-[10px] text-slate-500 font-mono tracking-widest text-[#F47321]">REGION: APAC</p>
             </div>
-            <div className="w-9 h-9 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center text-xs font-bold text-white shadow-inner">ADM</div>
+            <div className="w-9 h-9 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center text-xs font-bold text-white shadow-inner">AW</div>
             <button className="p-2 text-slate-500 hover:text-red-400 transition-colors">
                <LogOut className="w-4 h-4" />
             </button>

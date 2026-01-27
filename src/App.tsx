@@ -13,30 +13,60 @@ import {
   Settings, 
   LogOut,
   Image as ImageIcon,
-  MoreVertical,
-  Download,
   Trash2,
-  ExternalLink,
   BarChart3,
   Smartphone,
   Monitor,
   Sparkles,
-  MessageSquare,
   ChevronDown,
   X,
   Calculator,
-  User,
   Database,
   ShieldCheck,
   TrendingUp,
-  Info,
   PieChart,
   Activity,
   Calendar
 } from 'lucide-react';
 
-// Theme Colors
-const SINO_ORANGE = '#F47321';
+// Data Interfaces
+interface LineItem {
+  id: string;
+  glCode: string;
+  costCenter: string;
+  profitCenter: string;
+  amount: string;
+  desc: string;
+  itemText: string;
+  memo: string;
+  conf: number;
+  aiCommentary: string;
+}
+
+interface InvoiceField {
+  val: string;
+  conf: number;
+}
+
+interface Invoice {
+  id: string;
+  vendor: string;
+  date: string;
+  amount: string;
+  status: string;
+  confidence: number;
+  companyCode: string;
+  companyName: string;
+  uploadedBy: string;
+  uploadMethod: 'Desktop' | 'Mobile';
+  fields: {
+    company: InvoiceField;
+    date: InvoiceField;
+    currency: InvoiceField;
+    supplier: InvoiceField;
+  };
+  lineItems: LineItem[];
+}
 
 const MOCK_DATA = {
   companies: [
@@ -77,7 +107,7 @@ const MOCK_DATA = {
   currencies: ['HKD', 'SGD', 'AUD', 'USD', 'GBP']
 };
 
-const MOCK_INVOICES = [
+const MOCK_INVOICES: Invoice[] = [
   {
     id: 'INV-HK-9921',
     vendor: 'OTIS Elevator Company HK',
@@ -144,7 +174,7 @@ const MOCK_INVOICES = [
   }
 ];
 
-const ConfidenceBadge = ({ score }) => {
+const ConfidenceBadge = ({ score }: { score?: number }) => {
   if (score === undefined) return null;
   const color = score >= 95 ? 'bg-green-500/10 text-green-600 border-green-200' : 
                 score >= 75 ? 'bg-amber-500/10 text-amber-600 border-amber-200' : 
@@ -157,7 +187,16 @@ const ConfidenceBadge = ({ score }) => {
   );
 };
 
-const SearchableSelect = ({ label, value, options, onChange, confidence, placeholder = "Search...", onFocus, onBlur }) => {
+interface SearchableSelectProps {
+  label: string;
+  value: string;
+  options: string[];
+  onChange: (val: string) => void;
+  confidence?: number;
+  placeholder?: string;
+}
+
+const SearchableSelect = ({ label, value, options, onChange, confidence, placeholder = "Search..." }: SearchableSelectProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -182,7 +221,7 @@ const SearchableSelect = ({ label, value, options, onChange, confidence, placeho
       </div>
 
       {isOpen && (
-        <div className="absolute z-50 top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden">
+        <div className="absolute z-50 top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100">
           <div className="p-2 border-b border-slate-100 bg-slate-50">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
@@ -225,13 +264,13 @@ const SearchableSelect = ({ label, value, options, onChange, confidence, placeho
 const App = () => {
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [view, setView] = useState('list');
-  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isAiOpen, setIsAiOpen] = useState(false);
-  const [approvalThreshold, setApprovalThreshold] = useState(90);
+  const [approvalThreshold, setApprovalThreshold] = useState<number>(90);
 
-  // Local state for invoice line items to allow adding/deleting
-  const [invoiceLines, setInvoiceLines] = useState([]);
+  // Local state for invoice line items
+  const [invoiceLines, setInvoiceLines] = useState<LineItem[]>([]);
 
   useEffect(() => {
     if (selectedInvoice) {
@@ -239,13 +278,13 @@ const App = () => {
     }
   }, [selectedInvoice]);
 
-  const handleOpenInvoice = (invoice) => {
+  const handleOpenInvoice = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
     setView('detail');
   };
 
   const handleAddRow = () => {
-    const newRow = {
+    const newRow: LineItem = {
       id: `li-manual-${Date.now()}`,
       glCode: '',
       costCenter: '',
@@ -260,11 +299,11 @@ const App = () => {
     setInvoiceLines([...invoiceLines, newRow]);
   };
 
-  const handleDeleteRow = (id) => {
+  const handleDeleteRow = (id: string) => {
     setInvoiceLines(invoiceLines.filter(line => line.id !== id));
   };
 
-  const handleUpdateLine = (id, field, value) => {
+  const handleUpdateLine = (id: string, field: keyof LineItem, value: string) => {
     setInvoiceLines(invoiceLines.map(line => 
       line.id === id ? { ...line, [field]: value } : line
     ));
@@ -518,7 +557,7 @@ const App = () => {
                   min="50" 
                   max="100" 
                   value={approvalThreshold} 
-                  onChange={(e) => setApprovalThreshold(e.target.value)}
+                  onChange={(e) => setApprovalThreshold(parseInt(e.target.value, 10))}
                   className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#F47321]" 
                 />
               </div>
@@ -566,220 +605,224 @@ const App = () => {
     </div>
   );
 
-  const InvoiceDetail = () => (
-    <div className="h-screen flex flex-col bg-white animate-in slide-in-from-right duration-300">
-      <header className="h-16 bg-slate-900 px-6 flex items-center justify-between z-10">
-        <div className="flex items-center gap-4">
-          <button onClick={() => setView('list')} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-            <ArrowLeft className="w-5 h-5 text-white" />
-          </button>
-          <div className="h-6 w-[1px] bg-white/20" />
-          <div className="text-white">
-            <h2 className="text-sm font-bold tracking-tight uppercase tracking-widest">{selectedInvoice.vendor}</h2>
-            <p className="text-[10px] text-slate-400">{selectedInvoice.companyName}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="px-4 py-2 text-white/70 hover:text-white font-bold text-xs uppercase tracking-widest transition-colors">Save Progress</button>
-          <button className="px-6 py-2 bg-[#F47321] text-white rounded-lg font-black text-xs uppercase tracking-widest shadow-lg shadow-[#F47321]/30 hover:bg-[#d6621a] transition-all">Post to SAP</button>
-        </div>
-      </header>
+  const InvoiceDetail = () => {
+    if (!selectedInvoice) return null;
 
-      <div className="flex-1 flex overflow-hidden">
-        <div className="flex-1 bg-slate-100 p-8 overflow-auto border-r border-slate-200 relative">
-          <div className="bg-white aspect-[1/1.414] w-full max-w-2xl mx-auto shadow-2xl p-12 relative rounded-sm border border-slate-200">
-             <div className="flex justify-between items-start mb-12 border-b border-slate-100 pb-8">
-               <div className="w-40 h-16 border-2 border-slate-100 rounded-lg flex items-center justify-center text-slate-100 font-black italic select-none uppercase tracking-tighter leading-none text-center">VENDOR<br/>LOGO</div>
-               <div className="text-right">
-                 <h1 className="text-3xl font-black text-slate-800 tracking-tighter">TAX INVOICE</h1>
-                 <p className="text-slate-400 font-mono text-sm tracking-widest">{selectedInvoice.id}</p>
-                 <p className="text-slate-400 text-xs">Dated: {selectedInvoice.date}</p>
+    return (
+      <div className="h-screen flex flex-col bg-white animate-in slide-in-from-right duration-300">
+        <header className="h-16 bg-slate-900 px-6 flex items-center justify-between z-10">
+          <div className="flex items-center gap-4">
+            <button onClick={() => setView('list')} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+              <ArrowLeft className="w-5 h-5 text-white" />
+            </button>
+            <div className="h-6 w-[1px] bg-white/20" />
+            <div className="text-white">
+              <h2 className="text-sm font-bold tracking-tight uppercase tracking-widest">{selectedInvoice.vendor}</h2>
+              <p className="text-[10px] text-slate-400">{selectedInvoice.companyName}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button className="px-4 py-2 text-white/70 hover:text-white font-bold text-xs uppercase tracking-widest transition-colors">Save Progress</button>
+            <button className="px-6 py-2 bg-[#F47321] text-white rounded-lg font-black text-xs uppercase tracking-widest shadow-lg shadow-[#F47321]/30 hover:bg-[#d6621a] transition-all">Post to SAP</button>
+          </div>
+        </header>
+
+        <div className="flex-1 flex overflow-hidden">
+          <div className="flex-1 bg-slate-100 p-8 overflow-auto border-r border-slate-200 relative">
+            <div className="bg-white aspect-[1/1.414] w-full max-w-2xl mx-auto shadow-2xl p-12 relative rounded-sm border border-slate-200">
+               <div className="flex justify-between items-start mb-12 border-b border-slate-100 pb-8">
+                 <div className="w-40 h-16 border-2 border-slate-100 rounded-lg flex items-center justify-center text-slate-100 font-black italic select-none uppercase tracking-tighter leading-none text-center">VENDOR<br/>LOGO</div>
+                 <div className="text-right">
+                   <h1 className="text-3xl font-black text-slate-800 tracking-tighter">TAX INVOICE</h1>
+                   <p className="text-slate-400 font-mono text-sm tracking-widest">{selectedInvoice.id}</p>
+                   <p className="text-slate-400 text-xs">Dated: {selectedInvoice.date}</p>
+                 </div>
                </div>
-             </div>
-             
-             <div className="grid grid-cols-2 gap-12 mb-12 text-sm">
-                <div>
-                  <p className="font-bold text-slate-400 uppercase text-[10px] mb-2 tracking-widest">From Supplier</p>
-                  <p className="font-bold text-lg text-slate-900">{selectedInvoice.vendor}</p>
-                  <p className="text-slate-500 italic mt-1 text-xs underline underline-offset-4 decoration-[#F47321]/30 cursor-help">Verified SAP Vendor Record</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-slate-400 uppercase text-[10px] mb-2 tracking-widest">Billed To Sino Entity</p>
-                  <p className="font-bold text-[#F47321]">{selectedInvoice.companyName}</p>
-                  <p className="text-slate-500 font-mono text-xs">Hub: {selectedInvoice.companyCode}</p>
-                </div>
-             </div>
-
-             <div className="mt-12 space-y-4">
-                <div className="flex justify-between font-bold text-[10px] text-slate-400 uppercase border-b border-slate-200 pb-2 tracking-widest">
-                   <span>Service Description</span>
-                   <span>Value ({selectedInvoice.fields.currency.val})</span>
-                </div>
-                {invoiceLines.map((li, i) => (
-                  <div key={i} className={`flex justify-between text-sm py-4 border-b border-slate-50 transition-colors`}>
-                    <div className="flex flex-col gap-1">
-                       <span className="text-slate-900 font-bold">{li.desc}</span>
-                       <span className="text-[10px] text-slate-400 italic font-medium">Auto-Label: {li.itemText}</span>
-                    </div>
-                    <span className="font-black text-slate-900 text-base">{li.amount}</span>
+               
+               <div className="grid grid-cols-2 gap-12 mb-12 text-sm">
+                  <div>
+                    <p className="font-bold text-slate-400 uppercase text-[10px] mb-2 tracking-widest">From Supplier</p>
+                    <p className="font-bold text-lg text-slate-900">{selectedInvoice.vendor}</p>
+                    <p className="text-slate-500 italic mt-1 text-xs underline underline-offset-4 decoration-[#F47321]/30 cursor-help">Verified SAP Vendor Record</p>
                   </div>
-                ))}
-             </div>
+                  <div className="text-right">
+                    <p className="font-bold text-slate-400 uppercase text-[10px] mb-2 tracking-widest">Billed To Sino Entity</p>
+                    <p className="font-bold text-[#F47321]">{selectedInvoice.companyName}</p>
+                    <p className="text-slate-500 font-mono text-xs">Hub: {selectedInvoice.companyCode}</p>
+                  </div>
+               </div>
 
-             <div className="mt-16 pt-8 border-t-2 border-slate-900 flex justify-between items-end">
-                <div className="text-slate-400 text-[10px] uppercase tracking-tighter font-bold italic">Sino Internal Compliance: Property Audit Ready</div>
-                <div className="text-right">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Payables</p>
-                  <p className="text-4xl font-black text-slate-900 tracking-tighter">
-                    <span className="text-sm font-bold text-slate-400 mr-2">{selectedInvoice.fields.currency.val}</span>
-                    {selectedInvoice.amount}
-                  </p>
-                </div>
-             </div>
+               <div className="mt-12 space-y-4">
+                  <div className="flex justify-between font-bold text-[10px] text-slate-400 uppercase border-b border-slate-200 pb-2 tracking-widest">
+                     <span>Service Description</span>
+                     <span>Value ({selectedInvoice.fields.currency.val})</span>
+                  </div>
+                  {invoiceLines.map((li, i) => (
+                    <div key={i} className={`flex justify-between text-sm py-4 border-b border-slate-50 transition-colors`}>
+                      <div className="flex flex-col gap-1">
+                         <span className="text-slate-900 font-bold">{li.desc}</span>
+                         <span className="text-[10px] text-slate-400 italic font-medium">Auto-Label: {li.itemText}</span>
+                      </div>
+                      <span className="font-black text-slate-900 text-base">{li.amount}</span>
+                    </div>
+                  ))}
+               </div>
+
+               <div className="mt-16 pt-8 border-t-2 border-slate-900 flex justify-between items-end">
+                  <div className="text-slate-400 text-[10px] uppercase tracking-tighter font-bold italic">Sino Internal Compliance: Property Audit Ready</div>
+                  <div className="text-right">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Payables</p>
+                    <p className="text-4xl font-black text-slate-900 tracking-tighter">
+                      <span className="text-sm font-bold text-slate-400 mr-2">{selectedInvoice.fields.currency.val}</span>
+                      {selectedInvoice.amount}
+                    </p>
+                  </div>
+               </div>
+            </div>
           </div>
-        </div>
 
-        <div className="w-[500px] flex flex-col bg-white overflow-hidden shadow-xl border-l border-slate-200">
-          <div className="flex-1 overflow-y-auto p-6 space-y-8">
-            <section className="space-y-4">
-              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] border-b border-slate-100 pb-2">Header Extraction (AI)</h3>
-              <div className="space-y-4">
-                <SearchableSelect label="Sino Company Unit" value={selectedInvoice.fields.company.val} options={MOCK_DATA.companies.map(c => c.label)} confidence={selectedInvoice.fields.company.conf} onChange={() => {}} />
-                <SearchableSelect label="Verified Supplier" value={selectedInvoice.fields.supplier.val} options={MOCK_DATA.suppliers} confidence={selectedInvoice.fields.supplier.conf} onChange={() => {}} />
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between"><label className="text-xs font-bold text-slate-600">Document Date</label><ConfidenceBadge score={selectedInvoice.fields.date.conf} /></div>
-                    <input type="date" defaultValue={selectedInvoice.date} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm font-medium outline-none focus:ring-1 focus:ring-[#F47321]" />
+          <div className="w-[500px] flex flex-col bg-white overflow-hidden shadow-xl border-l border-slate-200">
+            <div className="flex-1 overflow-y-auto p-6 space-y-8">
+              <section className="space-y-4">
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] border-b border-slate-100 pb-2">Header Extraction (AI)</h3>
+                <div className="space-y-4">
+                  <SearchableSelect label="Sino Company Unit" value={selectedInvoice.fields.company.val} options={MOCK_DATA.companies.map(c => c.label)} confidence={selectedInvoice.fields.company.conf} onChange={() => {}} />
+                  <SearchableSelect label="Verified Supplier" value={selectedInvoice.fields.supplier.val} options={MOCK_DATA.suppliers} confidence={selectedInvoice.fields.supplier.conf} onChange={() => {}} />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between"><label className="text-xs font-bold text-slate-600">Document Date</label><ConfidenceBadge score={selectedInvoice.fields.date.conf} /></div>
+                      <input type="date" defaultValue={selectedInvoice.date} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm font-medium outline-none focus:ring-1 focus:ring-[#F47321]" />
+                    </div>
+                    <SearchableSelect label="Currency" value={selectedInvoice.fields.currency.val} options={MOCK_DATA.currencies} confidence={selectedInvoice.fields.currency.conf} onChange={() => {}} />
                   </div>
-                  <SearchableSelect label="Currency" value={selectedInvoice.fields.currency.val} options={MOCK_DATA.currencies} confidence={selectedInvoice.fields.currency.conf} onChange={() => {}} />
                 </div>
-              </div>
-            </section>
+              </section>
 
-            <section className="space-y-6">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Project allocations</h3>
-                <button 
-                  onClick={handleAddRow}
-                  className="flex items-center gap-1 text-[10px] font-bold text-[#F47321] uppercase hover:underline"
-                >
-                  <Plus className="w-3 h-3"/> New row
-                </button>
-              </div>
+              <section className="space-y-6">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Project allocations</h3>
+                  <button 
+                    onClick={handleAddRow}
+                    className="flex items-center gap-1 text-[10px] font-bold text-[#F47321] uppercase hover:underline"
+                  >
+                    <Plus className="w-3 h-3"/> New row
+                  </button>
+                </div>
 
-              {invoiceLines.map((li, idx) => (
-                <div key={li.id} className="border border-slate-200 bg-slate-50/50 rounded-2xl overflow-hidden shadow-sm transition-all mb-4">
-                  <div className="p-4 bg-white border-b border-slate-100 flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-black text-[#F47321] bg-[#F47321]/10 px-2 py-1 rounded tracking-tighter">ITEM {String(idx+1).padStart(2, '0')}</span>
-                      <ConfidenceBadge score={li.conf} />
-                    </div>
-                    <button 
-                      onClick={() => handleDeleteRow(li.id)}
-                      className="text-slate-300 hover:text-red-500 transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  <div className="p-4 space-y-4">
-                    <div className="bg-[#F47321]/5 border border-[#F47321]/10 p-3 rounded-xl flex items-start gap-3">
-                       <Sparkles className="w-4 h-4 text-[#F47321] shrink-0 mt-0.5" />
-                       <div className="space-y-0.5">
-                         <p className="text-[10px] font-black text-[#F47321] uppercase tracking-wider">AI Insight</p>
-                         <p className="text-xs text-slate-700 italic leading-relaxed">{li.aiCommentary}</p>
-                       </div>
+                {invoiceLines.map((li, idx) => (
+                  <div key={li.id} className="border border-slate-200 bg-slate-50/50 rounded-2xl overflow-hidden shadow-sm transition-all mb-4">
+                    <div className="p-4 bg-white border-b border-slate-100 flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black text-[#F47321] bg-[#F47321]/10 px-2 py-1 rounded tracking-tighter">ITEM {String(idx+1).padStart(2, '0')}</span>
+                        <ConfidenceBadge score={li.conf} />
+                      </div>
+                      <button 
+                        onClick={() => handleDeleteRow(li.id)}
+                        className="text-slate-300 hover:text-red-500 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="col-span-2">
+                    <div className="p-4 space-y-4">
+                      <div className="bg-[#F47321]/5 border border-[#F47321]/10 p-3 rounded-xl flex items-start gap-3">
+                         <Sparkles className="w-4 h-4 text-[#F47321] shrink-0 mt-0.5" />
+                         <div className="space-y-0.5">
+                           <p className="text-[10px] font-black text-[#F47321] uppercase tracking-wider">AI Insight</p>
+                           <p className="text-xs text-slate-700 italic leading-relaxed">{li.aiCommentary}</p>
+                         </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="col-span-2">
+                          <SearchableSelect 
+                            label="SAP GL Account" 
+                            value={li.glCode} 
+                            options={MOCK_DATA.glAccounts} 
+                            confidence={li.conf} 
+                            onChange={(val) => handleUpdateLine(li.id, 'glCode', val)} 
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase">Amount</label>
+                          <input 
+                            type="text" 
+                            value={li.amount} 
+                            onChange={(e) => handleUpdateLine(li.id, 'amount', e.target.value)}
+                            className="w-full bg-white border border-slate-200 rounded-lg px-2 py-2.5 text-xs font-black text-right outline-none focus:border-[#F47321]" 
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
                         <SearchableSelect 
-                          label="SAP GL Account" 
-                          value={li.glCode} 
-                          options={MOCK_DATA.glAccounts} 
-                          confidence={li.conf} 
-                          onChange={(val) => handleUpdateLine(li.id, 'glCode', val)} 
+                          label="Profit Center" 
+                          value={li.profitCenter} 
+                          options={MOCK_DATA.profitCenters} 
+                          confidence={li.conf > 90 ? li.conf : li.conf - 2} 
+                          onChange={(val) => handleUpdateLine(li.id, 'profitCenter', val)} 
+                        />
+                        <SearchableSelect 
+                          label="Cost Center" 
+                          value={li.costCenter} 
+                          options={MOCK_DATA.costCenters} 
+                          confidence={li.conf > 90 ? li.conf : li.conf - 5} 
+                          onChange={(val) => handleUpdateLine(li.id, 'costCenter', val)} 
                         />
                       </div>
+
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase">Amount</label>
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">AI Item Text</label>
+                          <ConfidenceBadge score={li.conf > 90 ? li.conf : li.conf - 2} />
+                        </div>
                         <input 
                           type="text" 
-                          value={li.amount} 
-                          onChange={(e) => handleUpdateLine(li.id, 'amount', e.target.value)}
-                          className="w-full bg-white border border-slate-200 rounded-lg px-2 py-2.5 text-xs font-black text-right outline-none focus:border-[#F47321]" 
+                          value={li.itemText} 
+                          onChange={(e) => handleUpdateLine(li.id, 'itemText', e.target.value)}
+                          className="w-full bg-white border border-slate-200 rounded-lg px-2 py-2.5 text-xs font-medium italic focus:border-[#F47321] outline-none shadow-sm" 
+                        />
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-100">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Audit Memo / Property Note</label>
+                        <textarea 
+                          rows="2" 
+                          placeholder="Add site-specific notes..." 
+                          value={li.memo}
+                          onChange={(e) => handleUpdateLine(li.id, 'memo', e.target.value)}
+                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs italic resize-none outline-none shadow-inner" 
                         />
                       </div>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <SearchableSelect 
-                        label="Profit Center" 
-                        value={li.profitCenter} 
-                        options={MOCK_DATA.profitCenters} 
-                        confidence={li.conf > 90 ? li.conf : li.conf - 2} 
-                        onChange={(val) => handleUpdateLine(li.id, 'profitCenter', val)} 
-                      />
-                      <SearchableSelect 
-                        label="Cost Center" 
-                        value={li.costCenter} 
-                        options={MOCK_DATA.costCenters} 
-                        confidence={li.conf > 90 ? li.conf : li.conf - 5} 
-                        onChange={(val) => handleUpdateLine(li.id, 'costCenter', val)} 
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">AI Item Text</label>
-                        <ConfidenceBadge score={li.conf > 90 ? li.conf : li.conf - 2} />
-                      </div>
-                      <input 
-                        type="text" 
-                        value={li.itemText} 
-                        onChange={(e) => handleUpdateLine(li.id, 'itemText', e.target.value)}
-                        className="w-full bg-white border border-slate-200 rounded-lg px-2 py-2.5 text-xs font-medium italic focus:border-[#F47321] outline-none shadow-sm" 
-                      />
-                    </div>
-
-                    <div className="pt-2 border-t border-slate-100">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Audit Memo / Property Note</label>
-                      <textarea 
-                        rows="2" 
-                        placeholder="Add site-specific notes..." 
-                        value={li.memo}
-                        onChange={(e) => handleUpdateLine(li.id, 'memo', e.target.value)}
-                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs italic resize-none outline-none shadow-inner" 
-                      />
-                    </div>
                   </div>
-                </div>
-              ))}
-            </section>
-          </div>
-          
-          <div className="p-6 bg-slate-900 text-white shadow-2xl">
-             <div className="flex justify-between items-end">
-               <div>
-                 <p className="text-[10px] font-bold text-slate-500 uppercase mb-1 tracking-widest">Amount Allocated</p>
-                 <p className="text-2xl font-black tracking-tighter">
-                   <span className="text-xs font-bold text-slate-500 mr-2 uppercase">{selectedInvoice.fields.currency.val}</span>
-                   {totalAllocated}
-                 </p>
+                ))}
+              </section>
+            </div>
+            
+            <div className="p-6 bg-slate-900 text-white shadow-2xl">
+               <div className="flex justify-between items-end">
+                 <div>
+                   <p className="text-[10px] font-bold text-slate-500 uppercase mb-1 tracking-widest">Amount Allocated</p>
+                   <p className="text-2xl font-black tracking-tighter">
+                     <span className="text-xs font-bold text-slate-500 mr-2 uppercase">{selectedInvoice.fields.currency.val}</span>
+                     {totalAllocated}
+                   </p>
+                 </div>
+                 <div className="text-right">
+                    <div className={`flex items-center gap-2 text-xs font-bold mb-1 ${totalAllocated === selectedInvoice.amount ? 'text-green-400' : 'text-amber-400'}`}>
+                      {totalAllocated === selectedInvoice.amount ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                      {totalAllocated === selectedInvoice.amount ? 'SAP BALANCED' : 'VARIANCE DETECTED'}
+                    </div>
+                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest italic decoration-[#F47321] underline decoration-2 underline-offset-4">Region Ready</p>
+                 </div>
                </div>
-               <div className="text-right">
-                  <div className={`flex items-center gap-2 text-xs font-bold mb-1 ${totalAllocated === selectedInvoice.amount ? 'text-green-400' : 'text-amber-400'}`}>
-                    {totalAllocated === selectedInvoice.amount ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-                    {totalAllocated === selectedInvoice.amount ? 'SAP BALANCED' : 'VARIANCE DETECTED'}
-                  </div>
-                  <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest italic decoration-[#F47321] underline decoration-2 underline-offset-4">Region Ready</p>
-               </div>
-             </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 flex flex-col relative">

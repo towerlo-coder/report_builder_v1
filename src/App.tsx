@@ -113,7 +113,7 @@ const MOCK_INVOICES: Invoice[] = [
     vendor: 'OTIS Elevator Company HK',
     date: '2024-01-15',
     amount: '12,500.00',
-    status: 'Ready',
+    status: 'Posted to SAP', // Changed from Ready to Posted to SAP
     confidence: 98,
     companyCode: '1000',
     companyName: 'Sino HK Property Management',
@@ -145,7 +145,7 @@ const MOCK_INVOICES: Invoice[] = [
     vendor: 'Star Hotel Supplies SG',
     date: '2024-01-20',
     amount: '4,210.50',
-    status: 'Needs Review',
+    status: 'Pending Review',
     confidence: 78,
     companyCode: '2100',
     companyName: 'Sino SG Development Pte Ltd',
@@ -403,7 +403,7 @@ const App = () => {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${inv.status === 'Ready' ? 'bg-green-500' : 'bg-amber-500 animate-pulse'}`} />
+                      <div className={`w-2 h-2 rounded-full ${inv.status === 'Posted to SAP' ? 'bg-green-500' : inv.status === 'Ready' ? 'bg-blue-500' : 'bg-amber-500 animate-pulse'}`} />
                       <span className="text-xs font-medium text-slate-700">{inv.status}</span>
                     </div>
                   </td>
@@ -608,6 +608,8 @@ const App = () => {
   const InvoiceDetail = () => {
     if (!selectedInvoice) return null;
 
+    const isPosted = selectedInvoice.status === 'Posted to SAP';
+
     return (
       <div className="h-screen flex flex-col bg-white animate-in slide-in-from-right duration-300">
         <header className="h-16 bg-slate-900 px-6 flex items-center justify-between z-10">
@@ -623,7 +625,16 @@ const App = () => {
           </div>
           <div className="flex items-center gap-3">
             <button className="px-4 py-2 text-white/70 hover:text-white font-bold text-xs uppercase tracking-widest transition-colors">Save Progress</button>
-            <button className="px-6 py-2 bg-[#F47321] text-white rounded-lg font-black text-xs uppercase tracking-widest shadow-lg shadow-[#F47321]/30 hover:bg-[#d6621a] transition-all">Post to SAP</button>
+            <button 
+              disabled={isPosted}
+              className={`px-6 py-2 rounded-lg font-black text-xs uppercase tracking-widest shadow-lg transition-all ${
+                isPosted 
+                ? 'bg-slate-700 text-slate-400 cursor-not-allowed' 
+                : 'bg-[#F47321] text-white shadow-[#F47321]/30 hover:bg-[#d6621a]'
+              }`}
+            >
+              {isPosted ? 'Already Posted' : 'Post to SAP'}
+            </button>
           </div>
         </header>
 
@@ -684,7 +695,7 @@ const App = () => {
           <div className="w-[500px] flex flex-col bg-white overflow-hidden shadow-xl border-l border-slate-200">
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
               <section className="space-y-4">
-                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] border-b border-slate-100 pb-2">Header</h3>
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] border-b border-slate-100 pb-2">Header Extraction (AI)</h3>
                 <div className="space-y-4">
                   <SearchableSelect label="Sino Company Unit" value={selectedInvoice.fields.company.val} options={MOCK_DATA.companies.map(c => c.label)} confidence={selectedInvoice.fields.company.conf} onChange={() => {}} />
                   <SearchableSelect label="Verified Supplier" value={selectedInvoice.fields.supplier.val} options={MOCK_DATA.suppliers} confidence={selectedInvoice.fields.supplier.conf} onChange={() => {}} />
@@ -700,13 +711,15 @@ const App = () => {
 
               <section className="space-y-6">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Line Items</h3>
-                  <button 
-                    onClick={handleAddRow}
-                    className="flex items-center gap-1 text-[10px] font-bold text-[#F47321] uppercase hover:underline"
-                  >
-                    <Plus className="w-3 h-3"/> New row
-                  </button>
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Project allocations</h3>
+                  {!isPosted && (
+                    <button 
+                      onClick={handleAddRow}
+                      className="flex items-center gap-1 text-[10px] font-bold text-[#F47321] uppercase hover:underline"
+                    >
+                      <Plus className="w-3 h-3"/> New row
+                    </button>
+                  )}
                 </div>
 
                 {invoiceLines.map((li, idx) => (
@@ -716,12 +729,14 @@ const App = () => {
                         <span className="text-[10px] font-black text-[#F47321] bg-[#F47321]/10 px-2 py-1 rounded tracking-tighter">ITEM {String(idx+1).padStart(2, '0')}</span>
                         <ConfidenceBadge score={li.conf} />
                       </div>
-                      <button 
-                        onClick={() => handleDeleteRow(li.id)}
-                        className="text-slate-300 hover:text-red-500 transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {!isPosted && (
+                        <button 
+                          onClick={() => handleDeleteRow(li.id)}
+                          className="text-slate-300 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
 
                     <div className="p-4 space-y-4">
@@ -740,16 +755,17 @@ const App = () => {
                             value={li.glCode} 
                             options={MOCK_DATA.glAccounts} 
                             confidence={li.conf} 
-                            onChange={(val) => handleUpdateLine(li.id, 'glCode', val)} 
+                            onChange={(val) => !isPosted && handleUpdateLine(li.id, 'glCode', val)} 
                           />
                         </div>
                         <div className="space-y-1">
                           <label className="text-[10px] font-bold text-slate-500 uppercase">Amount</label>
                           <input 
                             type="text" 
+                            disabled={isPosted}
                             value={li.amount} 
                             onChange={(e) => handleUpdateLine(li.id, 'amount', e.target.value)}
-                            className="w-full bg-white border border-slate-200 rounded-lg px-2 py-2.5 text-xs font-black text-right outline-none focus:border-[#F47321]" 
+                            className="w-full bg-white border border-slate-200 rounded-lg px-2 py-2.5 text-xs font-black text-right outline-none focus:border-[#F47321] disabled:bg-slate-50" 
                           />
                         </div>
                       </div>
@@ -760,14 +776,14 @@ const App = () => {
                           value={li.profitCenter} 
                           options={MOCK_DATA.profitCenters} 
                           confidence={li.conf > 90 ? li.conf : li.conf - 2} 
-                          onChange={(val) => handleUpdateLine(li.id, 'profitCenter', val)} 
+                          onChange={(val) => !isPosted && handleUpdateLine(li.id, 'profitCenter', val)} 
                         />
                         <SearchableSelect 
                           label="Cost Center" 
                           value={li.costCenter} 
                           options={MOCK_DATA.costCenters} 
                           confidence={li.conf > 90 ? li.conf : li.conf - 5} 
-                          onChange={(val) => handleUpdateLine(li.id, 'costCenter', val)} 
+                          onChange={(val) => !isPosted && handleUpdateLine(li.id, 'costCenter', val)} 
                         />
                       </div>
 
@@ -778,9 +794,10 @@ const App = () => {
                         </div>
                         <input 
                           type="text" 
+                          disabled={isPosted}
                           value={li.itemText} 
                           onChange={(e) => handleUpdateLine(li.id, 'itemText', e.target.value)}
-                          className="w-full bg-white border border-slate-200 rounded-lg px-2 py-2.5 text-xs font-medium italic focus:border-[#F47321] outline-none shadow-sm" 
+                          className="w-full bg-white border border-slate-200 rounded-lg px-2 py-2.5 text-xs font-medium italic focus:border-[#F47321] outline-none shadow-sm disabled:bg-slate-50" 
                         />
                       </div>
 
@@ -788,10 +805,11 @@ const App = () => {
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Audit Memo / Property Note</label>
                         <textarea 
                           rows={2} 
+                          disabled={isPosted}
                           placeholder="Add site-specific notes..." 
                           value={li.memo}
                           onChange={(e) => handleUpdateLine(li.id, 'memo', e.target.value)}
-                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs italic resize-none outline-none shadow-inner" 
+                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs italic resize-none outline-none shadow-inner disabled:bg-slate-50" 
                         />
                       </div>
                     </div>
@@ -803,7 +821,7 @@ const App = () => {
             <div className="p-6 bg-slate-900 text-white shadow-2xl">
                <div className="flex justify-between items-end">
                  <div>
-                   <p className="text-[10px] font-bold text-slate-500 uppercase mb-1 tracking-widest">Total Amount</p>
+                   <p className="text-[10px] font-bold text-slate-500 uppercase mb-1 tracking-widest">Amount Allocated</p>
                    <p className="text-2xl font-black tracking-tighter">
                      <span className="text-xs font-bold text-slate-500 mr-2 uppercase">{selectedInvoice.fields.currency.val}</span>
                      {totalAllocated}
@@ -814,7 +832,7 @@ const App = () => {
                       {totalAllocated === selectedInvoice.amount ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
                       {totalAllocated === selectedInvoice.amount ? 'SAP BALANCED' : 'VARIANCE DETECTED'}
                     </div>
-                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest italic decoration-[#F47321] underline decoration-2 underline-offset-4">###</p>
+                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest italic decoration-[#F47321] underline decoration-2 underline-offset-4">Region Ready</p>
                  </div>
                </div>
             </div>
@@ -857,7 +875,7 @@ const App = () => {
           <div className="flex items-center gap-3 pl-4 border-l border-white/10">
             <div className="text-right hidden sm:block">
               <p className="text-xs font-bold text-white uppercase tracking-tighter">Ada Wong</p>
-              <p className="text-[10px] text-slate-500 font-mono tracking-widest text-[#F47321]">REGION: APAC</p>
+              <p className="text-[10px] text-slate-500 font-mono tracking-widest text-[#F47321]">REGION: Hong Kong</p>
             </div>
             <div className="w-9 h-9 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center text-xs font-bold text-white shadow-inner">AW</div>
             <button className="p-2 text-slate-500 hover:text-red-400 transition-colors">

@@ -830,7 +830,6 @@ const App = () => {
                  <div className="text-right">
                     <div className={`flex items-center gap-2 text-xs font-bold mb-1 ${totalAllocated === selectedInvoice.amount ? 'text-green-400' : 'text-amber-400'}`}>
                       {totalAllocated === selectedInvoice.amount ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-                      {totalAllocated === selectedInvoice.amount ? 'SAP BALANCED' : 'VARIANCE DETECTED'}
                     </div>
                     <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest italic decoration-[#F47321] underline decoration-2 underline-offset-4"></p>
                  </div>

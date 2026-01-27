@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { 
   LayoutDashboard, 
   FileText, 
@@ -303,7 +303,7 @@ const App = () => {
     setInvoiceLines(invoiceLines.filter(line => line.id !== id));
   };
 
-  const handleUpdateLine = (id: string, field: keyof LineItem, value: string) => {
+  const handleUpdateLine = (id: string, field: keyof LineItem, value: string | number) => {
     setInvoiceLines(invoiceLines.map(line => 
       line.id === id ? { ...line, [field]: value } : line
     ));
@@ -557,7 +557,7 @@ const App = () => {
                   min="50" 
                   max="100" 
                   value={approvalThreshold} 
-                  onChange={(e) => setApprovalThreshold(parseInt(e.target.value, 10))}
+                  onChange={(e) => setApprovalThreshold(Number(e.target.value))}
                   className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#F47321]" 
                 />
               </div>
